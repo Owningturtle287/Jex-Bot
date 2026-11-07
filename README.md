@@ -45,7 +45,16 @@ python -m jex.train chat --config configs/pilot.json --data corpus/jex-pilot-cha
   --threads 6 --batch 10 --lr .00065 --jex-weight .76 --steps 1400 \
   --eval-every 200 --eval-batches 32
 
-python -m jex.export --checkpoint runs/jex-pilot-chat/best.pt \
+python -m jex.synthetic --expanded --out corpus/synthetic-expanded.jsonl
+python -m jex.prepare chat --config configs/pilot.json --out corpus/jex-expanded \
+  --tokenizer corpus/pilot-pretrain/tokenizer.json --synthetic corpus/synthetic-expanded.jsonl \
+  --conversations 1600 --answer-tokens 200
+python -m jex.train chat --config configs/pilot.json --data corpus/jex-expanded \
+  --out runs/jex-expanded --init runs/jex-pilot-chat/best.pt --device cpu --bf16 \
+  --threads 6 --batch 10 --lr .00075 --jex-weight .88 --steps 1700 \
+  --eval-every 200 --eval-batches 32
+
+python -m jex.export --checkpoint runs/jex-expanded/best.pt \
   --tokenizer corpus/pilot-pretrain/tokenizer.json --out web/model
 python -m jex.evaluate --model web/model
 ```

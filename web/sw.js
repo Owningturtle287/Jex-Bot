@@ -1,0 +1,39 @@
+const PREFIX = "jex-bot-";
+// Bump this when publishing changes to the app shell or model.
+const CACHE = PREFIX + "v1";
+const ASSETS = [
+  "./", "./index.html", "./style.css", "./app.mjs", "./engine.mjs", "./worker.mjs",
+  "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",
+  "./icons/jex-192.png", "./icons/jex-512.png",
+];
+
+self.addEventListener("install", event => {
+  event.waitUntil((async () => {
+    const specResponse = await fetch("./model/model.json", { cache: "reload" });
+    if (!specResponse.ok) throw new Error("Model unavailable for offline setup");
+    const spec = await specResponse.clone().json();
+    const cache = await caches.open(CACHE);
+    await cache.addAll([...ASSETS, ...spec.weights.map(name => "./model/" + name)].map(url =>
+      new Request(new URL(url, self.registration.scope), { cache: "reload" })
+    ));
+    await cache.put(new URL("./model/model.json", self.registration.scope), specResponse);
+  })());
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil((async () => {
+    const obsolete = (await caches.keys()).filter(name => name.startsWith(PREFIX) && name !== CACHE);
+    await Promise.all(obsolete.map(name => caches.delete(name)));
+    await self.clients.claim();
+  })());
+});
+
+self.addEventListener("fetch", event => {
+  const request = event.request;
+  if (request.method !== "GET" || !request.url.startsWith(self.registration.scope)) return;
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const key = request.mode === "navigate" ? new URL("./index.html", self.registration.scope) : request;
+    return await cache.match(key) || fetch(request);
+  })());
+});

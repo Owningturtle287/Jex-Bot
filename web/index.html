@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f8f7fc">
+  <meta name="description" content="An experimental English chatbot trained from scratch. Replies are generated on your device.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Jex Bot</title>
+  <link rel="icon" href="./icons/jex-64.png">
+  <link rel="apple-touch-icon" href="./icons/jex-180.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="top-inner">
+      <a class="brand" href="./" aria-label="Jex Bot home">
+        <img src="./icons/jex-64.png" alt="" width="34" height="34">
+        <span>Jex <strong>Bot</strong></span>
+      </a>
+      <div class="top-actions">
+        <button id="install" class="quiet" type="button" hidden>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m-4-4 4 4 4-4M5 16v3h14v-3"/></svg>
+          <span>Install</span>
+        </button>
+        <button id="new-chat" class="quiet" type="button">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          <span>New chat</span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main class="shell">
+    <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+      <div class="mark"><img src="./icons/jex-192.png" alt="" width="80" height="80"></div>
+      <div class="eyebrow">JEX PILOT <span>·</span> ENGLISH</div>
+      <h1 id="welcome-title">Meet Jex Bot.</h1>
+      <p>A small English chatbot trained from scratch.<br class="desktop-only"> Start with a simple question or just say hello.</p>
+      <div class="suggestions" aria-label="Suggested prompts">
+        <button type="button" data-prompt="What is your name?"><span>01</span> Get to know Jex <b aria-hidden="true">↗</b></button>
+        <button type="button" data-prompt="Explain gravity in simple words."><span>02</span> Ask about gravity <b aria-hidden="true">↗</b></button>
+        <button type="button" data-prompt="Can you tell a short joke?"><span>03</span> Hear a quick joke <b aria-hidden="true">↗</b></button>
+      </div>
+    </section>
+    <section id="chat" class="chat" aria-label="Conversation" hidden>
+      <div class="chat-heading">
+        <span class="eyebrow">CONVERSATION</span>
+        <span class="chip">Jex Pilot</span>
+      </div>
+      <div id="messages" class="messages"></div>
+    </section>
+    <section class="composer" aria-label="Message controls">
+      <div id="connection" class="connection" data-state="loading" role="status">
+        <span class="indicator"></span><span id="connection-label">Loading Jex Pilot…</span>
+        <button id="retry" type="button" hidden>Retry</button>
+      </div>
+      <form id="composer-form">
+        <label class="sr-only" for="prompt">Message Jex Bot</label>
+        <textarea id="prompt" rows="1" maxlength="2000" placeholder="Message Jex Bot…" enterkeyhint="send" required></textarea>
+        <button id="send" class="send" type="submit" aria-label="Send message" disabled>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5m-5 5 5-5 5 5"/></svg>
+        </button>
+        <button id="stop" class="send" type="button" aria-label="Stop generation" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></svg>
+        </button>
+      </form>
+      <p class="fine-print">Early model. Replies may be inaccurate. Chats stay in this browser.</p>
+    </section>
+  </main>
+  <dialog id="install-dialog">
+    <form method="dialog">
+      <h2>Install Jex Bot</h2>
+      <p>On iPhone, open this page in Safari, tap Share, then choose <strong>Add to Home Screen</strong>.</p>
+      <p>On Android, open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
+      <button class="dialog-button">Done</button>
+    </form>
+  </dialog>
+  <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
+</body>
+</html>

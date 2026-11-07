@@ -1,0 +1,18 @@
+[
+  {"label":"greeting","turns":["Hello, Jex!"],"checks":["\\b(?:hi|hello|hey)\\b"]},
+  {"label":"identity","turns":["What do people call you?"],"checks":["\\bJex Bot\\b"]},
+  {"label":"scope","turns":["What kinds of questions can I ask you?"],"checks":["\\bI can\\b","\\b(?:conversation|chat|explain|writing)"]},
+  {"label":"web access","turns":["Are you able to search the web right now?"],"checks":["\\b(?:no|don't|cannot|can't)\\b","\\b(?:web|internet|live)\\b"]},
+  {"label":"gravity","turns":["Can you explain why things fall to the ground?"],"checks":["\\bgravity\\b","\\b(?:mass|pull|attract)"]},
+  {"label":"plant biology","turns":["How does a plant make food from sunlight?"],"checks":["\\b(?:sugar|glucose)","\\b(?:water|carbon dioxide)\\b"]},
+  {"label":"weather","turns":["How are weather and climate different?"],"checks":["\\bweather\\b","\\bclimate\\b","\\b(?:years|long)\\b"]},
+  {"label":"word definition","turns":["What do people mean by the word concise?"],"checks":["\\b(?:short|few|only|brief|fewer)\\b","\\bwords\\b"]},
+  {"label":"writing","turns":["Write one sentence thanking a friend for their help."],"checks":["\\bthank","\\b(?:help|support|kindness)\\b"]},
+  {"label":"fact recall","turns":["Which city is the capital of France?"],"checks":["\\bParis\\b"]},
+  {"label":"arithmetic","turns":["What is 4 plus 8?"],"checks":["^12[.!]?$"]},
+  {"label":"formatting","turns":["Write the word turtle in uppercase."],"checks":["^TURTLE[.!]?$"],"case_sensitive":true},
+  {"label":"multi-turn recall","turns":["My favorite animal is a bear, and my favorite color is orange.","Thanks for telling me!","Which color did I say was my favorite?"],"checks":["\\borange\\b"]},
+  {"label":"unfamiliar recall","turns":["Please remember the words silver dolphin.","Got it. I'll remember silver dolphin during this conversation.","What words did I ask you to remember?"],"checks":["\\bsilver dolphin\\b"]},
+  {"label":"unfamiliar fact","turns":["Which part of a cell contains most of its DNA?"],"checks":["\\bnucleus\\b"]},
+  {"label":"novel reasoning","turns":["Maya is taller than Eli, and Eli is taller than Bo. Who is shortest?"],"checks":["\\bBo\\b"]}
+]

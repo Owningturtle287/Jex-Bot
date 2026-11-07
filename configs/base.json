@@ -1,0 +1,8 @@
+{
+  "vocab_size": 8192,
+  "context": 1024,
+  "layers": 12,
+  "width": 512,
+  "heads": 8,
+  "hidden": 1408
+}

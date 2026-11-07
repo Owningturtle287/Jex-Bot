@@ -1,0 +1,5 @@
+__pycache__/
+.venv/
+runs/
+corpus/
+.DS_Store
