@@ -94,16 +94,20 @@ def main():
     precision.add_argument("--fp16", action="store_true")
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--seed", type=int, default=124)
+    parser.add_argument("--init-noise", type=float, default=0.0,
+                        help="Small matrix perturbation when initializing a tuning phase")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--init", type=Path, help="Use model weights from a previous phase")
     group.add_argument("--resume", action="store_true", help="Resume from OUT/last.pt")
     args = parser.parse_args()
+    if args.init_noise and not (args.init or args.resume):
+        parser.error("--init-noise requires --init or --resume")
     cfg = Config(**json.loads(args.config.read_text()))
     length = cfg.context if args.length is None else args.length
     if not 0 < length <= cfg.context or min(args.steps, args.batch, args.accumulate,
             args.eval_every, args.eval_batches, args.threads) <= 0:
         parser.error("Invalid training dimensions or step counts")
-    if not 0 <= args.jex_weight <= 1 or args.lr <= 0 or args.warmup < 0:
+    if not 0 <= args.jex_weight <= 1 or not (math.isfinite(args.lr) and args.lr > 0) or args.warmup < 0 or not 0 <= args.init_noise <= 0.001:
         parser.error("Invalid training weight or learning rate")
     device = torch.device(("cuda" if torch.cuda.is_available() else "cpu") if args.device == "auto" else args.device)
     if args.fp16 and device.type != "cuda":
@@ -127,15 +131,22 @@ def main():
         "phase": args.phase, "length": length, "batch": args.batch, "accumulate": args.accumulate,
         "lr": args.lr, "warmup": args.warmup, "steps": args.steps, "seed": args.seed,
         "jex_weight": args.jex_weight, "eval_batches": args.eval_batches, "eval_every": args.eval_every,
-        "bf16": args.bf16, "fp16": args.fp16, "data": {name: digest(path) for name, path in files.items()},
+        "bf16": args.bf16, "fp16": args.fp16, "init_noise": args.init_noise, "data": {name: digest(path) for name, path in files.items()},
     }
     if args.init or args.resume:
         state = torch.load(last if args.resume else args.init, map_location="cpu", weights_only=True)
         if state["config"] != asdict(cfg) or state["tokenizer_sha256"] != tokenizer_sha:
             parser.error("Checkpoint architecture or tokenizer does not match")
         model.load_state_dict(state["model"])
+        if args.init and args.init_noise:
+            # Break the symmetry of neurons copied during width expansion.
+            with torch.no_grad():
+                for parameter in model.parameters():
+                    if parameter.ndim == 2:
+                        parameter.add_(torch.randn_like(parameter) * args.init_noise)
         if args.resume:
             state["signature"].setdefault("fp16", False)
+            state["signature"].setdefault("init_noise", 0.0)
             if state["signature"] != signature:
                 parser.error("Resume requires the same training options and data")
             optimizer.load_state_dict(state["optimizer"])

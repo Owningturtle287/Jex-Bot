@@ -18,3 +18,13 @@ Use `configs/base.json` with the same commands and new run directories. Train it
 A first Base experiment can use approximately 800 million consumed training tokens. One example is 24,414 optimizer steps at 32,768 tokens per step, with a starting learning rate of `0.0006` and 1,000 warmup steps. Set `--device cuda --bf16 --length 1024 --batch 8 --accumulate 4` for a CUDA GPU with bfloat16 support. If memory is tight, reduce the batch size and increase accumulation in the same proportion. Start with a short throughput run on the target hardware before deciding the full training schedule. The current trainer is single-device and data preparation keeps the selected documents in RAM.
 
 Track held-out loss and evaluate fresh prompts for relevance, instruction-following, factual accuracy, and retention across turns before promoting a checkpoint. Exporting Base to a phone needs separate latency and memory measurements. The included web runtime and service-worker cache have been sized for the Pilot.
+
+## Conversation continuity
+
+The v2 training pass expands the learned Pilot to 6,689,024 parameters, preserving its initial logits before tuning. Weight inspection after the main pass showed that copied features had already diverged. A separate short-conversation experiment applied a small matrix perturbation before further tuning. The context grows from 256 to 1,024 tokens. The original examples in `jex/context_data.py` add follow-up questions, casual replies, identity questions after greetings, remembered facts, and corrected preferences. The external mix includes complete prefixes from Everyday Conversations and Smol-Magpie-Ultra.
+
+The new `data/context-eval.json` suite includes the reported failure patterns and separate name, correction, recall, fact, and reasoning cases. The screenshot patterns were included in training. Treat these checks as a development regression suite.
+
+The GPU workflow uses mixed precision and gradient scaling for float16, including unscaling before gradient clipping and saving the scaler state for resume. [PyTorch AMP examples](https://docs.pytorch.org/docs/stable/notes/amp_examples.html).
+
+The current session had no attached CUDA GPU or connected GPU training service. The v2 runs used CPU bfloat16. The GPU workflow is prepared for a separately connected CUDA runner.

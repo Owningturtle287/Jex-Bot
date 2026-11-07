@@ -147,7 +147,6 @@ function finish(error, canceled) {
     byId("announcement").textContent = "Jex Bot: " + (message.text || "Reply interrupted.");
   }
   active = null;
-  renderHistory();
   update();
   scrollToLatest();
 }

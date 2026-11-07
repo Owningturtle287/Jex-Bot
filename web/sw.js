@@ -1,6 +1,6 @@
 const PREFIX = "jex-bot-";
 // Bump this when publishing changes to the app shell or model.
-const CACHE = PREFIX + "v2";
+const CACHE = PREFIX + "v3";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.mjs", "./chats.mjs", "./engine.mjs", "./worker.mjs",
   "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",
