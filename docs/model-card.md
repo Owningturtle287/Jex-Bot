@@ -18,6 +18,8 @@ The exported model passed **12 of 16** checks in the [fixed development prompt s
 
 The release handled the greeting, identity, gravity, photosynthesis, a short thank-you note, and one familiar multi-turn recall example. It answered 4 plus 8 incorrectly, recalled the wrong words in an unfamiliar exchange, gave an unrelated answer to a cell biology question, and failed a new reasoning problem. Its replies can become irrelevant or incoherent outside the topics and patterns it practiced. It has no live web access.
 
-The browser worker was verified with the shipped checkpoint for startup, streamed replies, and cancellation. Tokenization and last-token logits were compared against the dequantized PyTorch reference on plain English, literal control-marker text, and Unicode. The maximum observed absolute logit difference was below 0.00001.
+The browser worker was exercised under Node with the shipped checkpoint for startup, streamed replies, and cancellation. Tokenization and last-token logits were compared against the dequantized PyTorch reference on plain English, literal control-marker text, and Unicode. The maximum observed absolute logit difference was below 0.00001.
 
 See [training notes](training.md) for dataset attribution and the larger configuration.
+
+The private app deployment succeeded. Live visual, installation, and offline browser checks remain unverified. The managed preview relay was unavailable, and the deployed cloud browser reached the ChatGPT sign-in gate.
