@@ -99,3 +99,35 @@ dialog p { line-height: 1.5; color: var(--muted); }
   .suggestions button { min-height: 44px; padding: 6px 12px; }
   .composer { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
 }
+.workspace { display: flex; flex: 1; width: min(1280px, 100%); margin: 0 auto; }
+.workspace .shell { flex: 1; min-width: 0; min-height: calc(100dvh - 69px); }
+.sidebar { position: sticky; top: 0; width: 250px; flex-shrink: 0; height: calc(100dvh - 69px); display: flex; flex-direction: column; border-right: 1px solid var(--line); padding: 24px 14px 16px; }
+.sidebar-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 6px 16px; }
+.sidebar-heading h2 { font-size: 15px; letter-spacing: -.025em; margin: 0; }
+.sidebar-heading > span { color: var(--muted); font-size: 11px; }
+.sidebar nav { overflow-y: auto; min-height: 0; }
+.chat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+.chat-list button { width: 100%; text-align: left; background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 11px 10px; color: var(--ink); display: grid; gap: 5px; }
+.chat-list button:hover { background: #eee8f8; }
+.chat-list button[aria-current="page"] { background: #eae1f8; border-color: #d9cbed; }
+.chat-list strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 650; }
+.chat-list time { color: var(--muted); font-size: 11px; }
+.history-empty { margin: 16px 10px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.sidebar-note { margin: auto 10px 0; padding-top: 18px; color: var(--muted); font-size: 11px; }
+.history-toggle { display: none; }
+.history-dialog { position: fixed; inset: 0 auto 0 0; margin: 0; border: 0; border-radius: 0 18px 18px 0; width: min(320px, 88vw); max-width: none; height: 100dvh; max-height: 100dvh; padding: max(18px, env(safe-area-inset-top)) 14px max(18px, env(safe-area-inset-bottom)); }
+.history-dialog[open] { display: flex; flex-direction: column; }
+.history-dialog nav { overflow-y: auto; min-height: 0; }
+.history-dialog .sidebar-heading { margin-bottom: 8px; }
+.history-new-chat { padding: 13px 12px; margin: 0 5px 15px; border-radius: 10px; border: 1px solid #d9cbed; color: var(--purple); background: #f1eafa; text-align: left; font-weight: 650; }
+.save-status { font-size: 12px; line-height: 1.4; margin: 7px 4px 0; color: #943e55; }
+@media (max-width: 760px) {
+  .sidebar { display: none; }
+  .history-toggle { display: inline-flex; }
+  .top-inner { padding-left: 12px; padding-right: 10px; gap: 6px; }
+  .top-actions { gap: 0; }
+  .quiet { padding-left: 8px; padding-right: 8px; }
+}
+@media (max-width: 380px) {
+  .history-toggle span { display: none; }
+}

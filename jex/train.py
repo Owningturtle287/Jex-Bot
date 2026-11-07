@@ -89,7 +89,9 @@ def main():
     parser.add_argument("--eval-batches", type=int, default=8)
     parser.add_argument("--jex-weight", type=float, default=0.5)
     parser.add_argument("--device", default="auto")
-    parser.add_argument("--bf16", action="store_true")
+    precision = parser.add_mutually_exclusive_group()
+    precision.add_argument("--bf16", action="store_true")
+    precision.add_argument("--fp16", action="store_true")
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--seed", type=int, default=124)
     group = parser.add_mutually_exclusive_group()
@@ -104,6 +106,9 @@ def main():
     if not 0 <= args.jex_weight <= 1 or args.lr <= 0 or args.warmup < 0:
         parser.error("Invalid training weight or learning rate")
     device = torch.device(("cuda" if torch.cuda.is_available() else "cpu") if args.device == "auto" else args.device)
+    if args.fp16 and device.type != "cuda":
+        parser.error("--fp16 requires a CUDA device")
+    scaler = torch.amp.GradScaler("cuda", enabled=args.fp16)
     torch.set_num_threads(args.threads)
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
@@ -122,7 +127,7 @@ def main():
         "phase": args.phase, "length": length, "batch": args.batch, "accumulate": args.accumulate,
         "lr": args.lr, "warmup": args.warmup, "steps": args.steps, "seed": args.seed,
         "jex_weight": args.jex_weight, "eval_batches": args.eval_batches, "eval_every": args.eval_every,
-        "bf16": args.bf16, "data": {name: digest(path) for name, path in files.items()},
+        "bf16": args.bf16, "fp16": args.fp16, "data": {name: digest(path) for name, path in files.items()},
     }
     if args.init or args.resume:
         state = torch.load(last if args.resume else args.init, map_location="cpu", weights_only=True)
@@ -130,9 +135,12 @@ def main():
             parser.error("Checkpoint architecture or tokenizer does not match")
         model.load_state_dict(state["model"])
         if args.resume:
+            state["signature"].setdefault("fp16", False)
             if state["signature"] != signature:
                 parser.error("Resume requires the same training options and data")
             optimizer.load_state_dict(state["optimizer"])
+            if args.fp16:
+                scaler.load_state_dict(state["scaler"])
             rng.bit_generator.state = state["rng"]
             start, best, tokens = state["step"], state["best"], state["tokens"]
         del state
@@ -142,7 +150,10 @@ def main():
     }
 
     def autocast():
-        return torch.autocast(device.type, dtype=torch.bfloat16) if args.bf16 else nullcontext()
+        if args.bf16 or args.fp16:
+            dtype = torch.bfloat16 if args.bf16 else torch.float16
+            return torch.autocast(device.type, dtype=dtype)
+        return nullcontext()
 
     @torch.no_grad()
     def validate():
@@ -174,7 +185,7 @@ def main():
         if improved:
             save(args.out / "best.pt", weights)
         save(last, {**weights, "optimizer": optimizer.state_dict(), "rng": rng.bit_generator.state,
-                    "signature": signature, "best": best})
+                    "signature": signature, "best": best, "scaler": scaler.state_dict()})
 
     started = time.monotonic()
     print(f"{sum(p.numel() for p in model.parameters()):,} parameters on {device}", flush=True)
@@ -193,10 +204,12 @@ def main():
         for x, y in batches:
             with autocast():
                 loss = loss_sum(model, x.to(device), y.to(device)) / count
-            loss.backward()
+            scaler.scale(loss).backward()
             losses.append(loss.detach())
+        scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-        optimizer.step()
+        scaler.step(optimizer)
+        scaler.update()
         tokens += count
         running += torch.stack(losses).sum().item()
         measured += 1

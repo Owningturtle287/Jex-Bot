@@ -33,7 +33,7 @@ def tokenizer_spec(path):
     return {"pattern": PATTERN, "pieces": pieces, "merges": merges}
 
 
-def export(checkpoint, tokenizer, out):
+def export(checkpoint, tokenizer, out, name="Jex Pilot"):
     state = torch.load(checkpoint, map_location="cpu", weights_only=True)
     if state["phase"] != "chat" or state["step"] <= 0:
         raise ValueError("Expected a trained chat checkpoint")
@@ -61,7 +61,7 @@ def export(checkpoint, tokenizer, out):
         name = f"jex-{sha[:12]}-{index}.bin"
         (out / name).write_bytes(weights[start:start + 192 * 1024])
         names.append(name)
-    spec = {"format": 1, "name": "Jex Pilot", "config": state["config"],
+    spec = {"format": 1, "name": name, "config": state["config"],
             "checkpoint_step": state["step"], "weights": names, "sha256": sha,
             "tokenizer_sha256": state["tokenizer_sha256"],
             "bytes": len(weights), "tensors": tensors, "tokenizer": tokenizer_spec(tokenizer)}
@@ -74,8 +74,9 @@ def main():
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--tokenizer", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--name", default="Jex Pilot")
     args = parser.parse_args()
-    export(args.checkpoint, args.tokenizer, args.out)
+    export(args.checkpoint, args.tokenizer, args.out, args.name)
 
 
 if __name__ == "__main__":

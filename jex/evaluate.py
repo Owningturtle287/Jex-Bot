@@ -57,6 +57,7 @@ def main():
         reply = generate(model, tokenizer, messages)
         flags = 0 if case.get("case_sensitive") else re.I
         success = all(re.search(pattern, reply, flags) for pattern in case["checks"])
+        success = success and not any(re.search(pattern, reply, flags) for pattern in case.get("reject", []))
         passed += success
         print(json.dumps({"label": case["label"], "passed": success, "reply": reply}, ensure_ascii=False))
     print(json.dumps({"passed": passed, "total": len(cases)}))

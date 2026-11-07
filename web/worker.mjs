@@ -26,11 +26,11 @@ async function initialize() {
     const hex = Array.from(hash, byte => byte.toString(16).padStart(2, "0")).join("");
     if (hex !== spec.sha256) throw new Error("Model checksum mismatch");
   }
-  return { decoder: new Decoder(spec, bytes.buffer), tokenizer: new Tokenizer(spec.tokenizer) };
+  return { name: spec.name, decoder: new Decoder(spec, bytes.buffer), tokenizer: new Tokenizer(spec.tokenizer) };
 }
 
 const model = initialize();
-model.then(() => postMessage({ type: "ready" }), () => postMessage({ type: "unavailable" }));
+model.then(({ name }) => postMessage({ type: "ready", name }), () => postMessage({ type: "unavailable" }));
 
 self.onmessage = async ({ data }) => {
   if (data.type === "stop") {
@@ -56,15 +56,15 @@ self.onmessage = async ({ data }) => {
       if (id === END) break;
       generated.push(id);
       const text = stream.decode(tokenizer.pieces[id], { stream: true });
-      if (text) postMessage({ type: "delta", text });
+      if (text) postMessage({ type: "delta", text, id: data.id });
       logits = decoder.forward(id, prompt.length + step);
       if (step % 4 === 3) await yieldToBrowser();
     }
     const rest = stream.decode();
-    if (rest && !canceled) postMessage({ type: "delta", text: rest });
-    postMessage({ type: "done", canceled });
+    if (rest && !canceled) postMessage({ type: "delta", text: rest, id: data.id });
+    postMessage({ type: "done", canceled, id: data.id });
   } catch {
-    postMessage({ type: "error" });
+    postMessage({ type: "error", id: data.id });
   } finally {
     running = false;
   }

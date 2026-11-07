@@ -1,8 +1,8 @@
 const PREFIX = "jex-bot-";
 // Bump this when publishing changes to the app shell or model.
-const CACHE = PREFIX + "v1";
+const CACHE = PREFIX + "v2";
 const ASSETS = [
-  "./", "./index.html", "./style.css", "./app.mjs", "./engine.mjs", "./worker.mjs",
+  "./", "./index.html", "./style.css", "./app.mjs", "./chats.mjs", "./engine.mjs", "./worker.mjs",
   "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",
   "./icons/jex-192.png", "./icons/jex-512.png",
 ];
@@ -36,4 +36,8 @@ self.addEventListener("fetch", event => {
     const key = request.mode === "navigate" ? new URL("./index.html", self.registration.scope) : request;
     return await cache.match(key) || fetch(request);
   })());
+});
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
 });

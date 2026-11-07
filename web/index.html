@@ -21,6 +21,10 @@
         <span>Jex <strong>Bot</strong></span>
       </a>
       <div class="top-actions">
+        <button id="history-toggle" class="quiet history-toggle" type="button" aria-label="Open saved chats" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+          <span>Chats</span>
+        </button>
         <button id="install" class="quiet" type="button" hidden>
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m-4-4 4 4 4-4M5 16v3h14v-3"/></svg>
           <span>Install</span>
@@ -32,10 +36,20 @@
       </div>
     </div>
   </header>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Saved chats">
+      <div class="sidebar-heading">
+        <h2>Your chats</h2>
+        <span>Latest first</span>
+      </div>
+      <nav aria-label="Chat history"><ol id="chat-list" class="chat-list"></ol></nav>
+      <p class="history-empty">Your conversations will appear here.</p>
+      <p class="sidebar-note">Saved on this device.</p>
+    </aside>
   <main class="shell">
     <section id="welcome" class="welcome" aria-labelledby="welcome-title">
       <div class="mark"><img src="./icons/jex-192.png" alt="" width="80" height="80"></div>
-      <div class="eyebrow">JEX PILOT <span>·</span> ENGLISH</div>
+      <div class="eyebrow"><span id="welcome-model">JEX</span> <span>·</span> ENGLISH</div>
       <h1 id="welcome-title">Meet Jex Bot.</h1>
       <p>A small English chatbot trained from scratch.<br class="desktop-only"> Start with a simple question or just say hello.</p>
       <div class="suggestions" aria-label="Suggested prompts">
@@ -47,7 +61,7 @@
     <section id="chat" class="chat" aria-label="Conversation" hidden>
       <div class="chat-heading">
         <span class="eyebrow">CONVERSATION</span>
-        <span class="chip">Jex Pilot</span>
+        <span id="model-name" class="chip">Jex</span>
       </div>
       <div id="messages" class="messages"></div>
     </section>
@@ -55,6 +69,7 @@
       <div id="connection" class="connection" data-state="loading" role="status">
         <span class="indicator"></span><span id="connection-label">Loading Jex Pilot…</span>
         <button id="retry" type="button" hidden>Retry</button>
+        <button id="app-update" type="button" hidden>Update ready</button>
       </div>
       <form id="composer-form">
         <label class="sr-only" for="prompt">Message Jex Bot</label>
@@ -66,9 +81,21 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></svg>
         </button>
       </form>
+      <p id="save-status" class="save-status" role="status" hidden></p>
       <p class="fine-print">Early model. Replies may be inaccurate. Chats stay in this browser.</p>
     </section>
   </main>
+  </div>
+  <dialog id="history-dialog" class="history-dialog" aria-labelledby="history-title">
+    <div class="sidebar-heading">
+      <h2 id="history-title">Your chats</h2>
+      <button id="history-close" class="quiet" type="button" aria-label="Close saved chats">✕</button>
+    </div>
+    <button id="history-new-chat" class="history-new-chat" type="button">＋ New chat</button>
+    <nav aria-label="Saved conversations"><ol id="mobile-chat-list" class="chat-list"></ol></nav>
+    <p class="history-empty">Your conversations will appear here.</p>
+    <p class="sidebar-note">Latest first. Saved on this device.</p>
+  </dialog>
   <dialog id="install-dialog">
     <form method="dialog">
       <h2>Install Jex Bot</h2>
