@@ -3,3 +3,7 @@ __pycache__/
 runs/
 corpus/
 .DS_Store
+node_modules/
+web/vendor/
+web/model/*.gguf
+web/model/*.gguf.part

@@ -69,11 +69,13 @@ h1 { margin: 10px 0 12px; font-size: clamp(48px, 9vw, 76px); line-height: .99; l
 .bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
 .message[data-pending] p { color: var(--muted); }
 .composer { position: sticky; bottom: 0; padding: 9px 0 max(14px, env(safe-area-inset-bottom)); background: var(--paper); }
-.connection { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; min-height: 25px; padding: 0 4px 7px; }
+.connection { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--muted); font-size: 12px; min-height: 25px; padding: 0 4px 7px; }
 .indicator { background: #9a7ad1; width: 7px; height: 7px; border-radius: 50%; }
 [data-state="ready"] .indicator { background: #27876b; }
 [data-state="error"] .indicator { background: #a84462; }
 .connection button { color: var(--purple); border: 0; background: none; font-weight: 700; padding: 2px 5px; text-decoration: underline; }
+#download-model { min-height: 36px; padding: 5px 9px; border-radius: 8px; background: #eee7fa; text-decoration: none; }
+#use-lite { min-height: 36px; }
 #composer-form { display: flex; align-items: flex-end; gap: 6px; padding: 8px; border: 1px solid #dcd4eb; border-radius: 17px; background: #fff; box-shadow: 0 7px 20px #27104e0c; }
 #composer-form:focus-within { border-color: #a487db; }
 textarea { display: block; flex: 1; min-width: 0; height: 44px; max-height: 130px; resize: none; line-height: 22px; padding: 11px 7px 11px 9px; border: 0; color: var(--ink); background: transparent; outline: none !important; font-size: 16px; }

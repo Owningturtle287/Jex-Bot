@@ -22,7 +22,8 @@ export function contextMessages(messages) {
   const context = [];
   for (let index = 0; index + 1 < messages.length; index += 2) {
     const user = messages[index], assistant = messages[index + 1];
-    if (user.role === "user" && assistant.role === "assistant" && assistant.text.trim()) {
+    if (user.role === "user" && assistant.role === "assistant" &&
+        (!assistant.status || assistant.status === "complete") && assistant.text.trim()) {
       context.push({ role: "user", text: user.text }, { role: "assistant", text: assistant.text });
     }
   }

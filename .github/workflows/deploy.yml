@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - "web/**"
+      - "scripts/build-web.mjs"
+      - "package*.json"
+      - "tests/**"
       - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
@@ -31,8 +34,14 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Build browser runtime and verify pinned Qwen weights
+        run: |
+          npm ci --ignore-scripts
+          npm run build:web
+
       - name: Verify app and model
         run: |
+          npm test
           for file in web/*.mjs web/sw.js; do
             node --check "$file"
           done
