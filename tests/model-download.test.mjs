@@ -57,17 +57,19 @@ test("rejects an HTTP error or a response for the wrong range", async () => {
 });
 
 test("switches to the pinned model host when the app does not serve the weights", async () => {
-  const urls = [];
   const local = "https://example.test/model.gguf";
-  const fetchPart = modelFetcher(async (url, options) => {
-    urls.push(url);
-    if (url === local) return new Response("Missing", { status: 404 });
-    assert.equal(options.credentials, "omit");
-    assert.equal(options.headers.Range, "bytes=0-1");
-    return partial([1, 2], "bytes 0-1/2");
-  });
   const options = { headers: { Range: "bytes=0-1" } };
-  await fetchPart(local, options);
-  await fetchPart(local, options);
-  assert.deepEqual(urls, [local, MODEL_SOURCE, MODEL_SOURCE]);
+  for (const status of [404, 503]) {
+    const urls = [];
+    const fetchPart = modelFetcher(async (url, request) => {
+      urls.push(url);
+      if (url === local) return new Response("Unavailable", { status });
+      assert.equal(request.credentials, "omit");
+      assert.equal(request.headers.Range, "bytes=0-1");
+      return partial([1, 2], "bytes 0-1/2");
+    });
+    await fetchPart(local, options);
+    await fetchPart(local, options);
+    assert.deepEqual(urls, [local, MODEL_SOURCE, MODEL_SOURCE]);
+  }
 });
