@@ -1,0 +1,8 @@
+[
+  {"label":"reported addition","turns":["What’s 2 plus 2"],"checks":["^4[.!]?$"]},
+  {"label":"reported correction","turns":["What’s 2 plus 2","13","Lol that’s wrong"],"checks":["2 \\+ 2 = 4"]},
+  {"label":"reported follow-up","turns":["What’s 2 plus 2","4","Lol that’s wrong","I checked again. 2 + 2 = 4.","What’s 12+1"],"checks":["^13[.!]?$"]},
+  {"label":"new personal detail","turns":["My dog's name is Figwort.","That's a great name!","What is the name of my dog?"],"checks":["\\bFigwort\\b"]},
+  {"label":"new corrected detail","turns":["The meeting is on Tuesday.","Okay.","It moved to Thursday.","Got it.","What day is the meeting now?"],"checks":["\\bThursday\\b"],"reject":["\\bTuesday\\b"]},
+  {"label":"new knowledge","turns":["Why do we see lightning before we hear thunder?"],"checks":["light","sound","faster"]}
+]

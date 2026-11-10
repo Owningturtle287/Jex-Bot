@@ -3,8 +3,9 @@ import {
   openChatDatabase, readChats, sortedChats, writeChat,
 } from "./chats.mjs";
 import { arithmeticReply } from "./calculator.mjs";
+import { explicitFactReply } from "./facts.mjs";
 import { loadLocalModel } from "./local-model.mjs";
-import { MODEL_BYTES } from "./model-settings.mjs";
+import { MODEL_BYTES, MODEL_DOWNLOAD_MB } from "./model-settings.mjs";
 
 const byId = id => document.getElementById(id);
 const form = byId("composer-form");
@@ -14,6 +15,7 @@ const list = byId("messages");
 const send = byId("send");
 const stop = byId("stop");
 const install = byId("install");
+const downloadModel = byId("download-model");
 const historyDialog = byId("history-dialog");
 const chats = new Map();
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -80,7 +82,7 @@ function update() {
   send.hidden = !!active;
   stop.hidden = !active;
   byId("app-update").disabled = !!active || connecting;
-  byId("download-model").disabled = !!active;
+  downloadModel.disabled = !!active;
   byId("use-lite").disabled = !!active;
   chat.hidden = !list.childElementCount;
   byId("welcome").hidden = !chat.hidden;
@@ -139,7 +141,7 @@ function selectChat(thread) {
 function state(value, label) {
   byId("connection").dataset.state = value;
   byId("connection-label").textContent = label;
-  byId("download-model").hidden = value === "loading" || (ready && mode === "local");
+  downloadModel.hidden = value === "loading" || (ready && mode === "local");
   byId("use-lite").hidden = value === "loading" || (ready && mode === "lite");
   update();
 }
@@ -272,9 +274,9 @@ form.addEventListener("submit", event => {
   update();
   window.scrollTo(0, document.documentElement.scrollHeight);
   const messages = [...context, { role: "user", text: user }];
-  const arithmetic = arithmeticReply(messages);
-  if (arithmetic !== undefined) {
-    addReplyText(arithmetic);
+  const localReply = arithmeticReply(messages) ?? explicitFactReply(user, current.messages.slice(0, -2));
+  if (localReply !== undefined) {
+    addReplyText(localReply);
     finish(false, false);
   } else if (localModel) {
     const signal = active.controller.signal;
@@ -294,7 +296,8 @@ prompt.addEventListener("keydown", event => {
   }
 });
 stop.addEventListener("click", stopGeneration);
-byId("download-model").addEventListener("click", () => connect("local", true));
+downloadModel.textContent = "Get Jex v3 (" + MODEL_DOWNLOAD_MB + " MB)";
+downloadModel.addEventListener("click", () => connect("local", true));
 byId("use-lite").addEventListener("click", () => connect("lite"));
 function newChat() {
   selectChat(createChat());

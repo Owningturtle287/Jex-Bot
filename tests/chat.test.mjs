@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { arithmeticReply } from "../web/calculator.mjs";
 import { contextMessages } from "../web/chats.mjs";
-import { buildPrompt } from "../web/model-context.mjs";
+import { explicitFactReply } from "../web/facts.mjs";
+import { buildPrompt, START_ASSISTANT } from "../web/model-context.mjs";
 
 const turns = (...lines) => lines.map((text, index) => ({ role: index % 2 ? "assistant" : "user", text }));
 const wordCount = text => text.split(/\s+/).length;
@@ -16,11 +17,26 @@ test("calculates the reported exchange, including checking a mistaken earlier an
 test("applies arithmetic precedence and leaves other requests to the model", () => {
   assert.equal(arithmeticReply(turns("How much is 2 times (3 plus 4)?")), "14");
   assert.equal(arithmeticReply(turns("Calculate 0.1 + 0.2")), "0.3");
+  assert.equal(arithmeticReply(turns("Calculate 0.3 - 0.2 - 0.1")), "0");
   assert.equal(arithmeticReply(turns("What is 4 divided by 0?")), "Division by zero is undefined.");
   assert.equal(arithmeticReply(turns("What is 8 / -2?")), "-4");
-  for (const text of ["2 + 3 apples", "2 ** 3", "2 3", "2 + )", "2 + 3, explain", "999999999999999999+1", "Wrong"]) {
+  for (const text of ["2 + 3 apples", "2 ** 3", "2 + 3!", "2 3", "2 + )", "2 + 3, explain", "999999999999999999+1", "Wrong"]) {
     assert.equal(arithmeticReply(turns(text)), undefined, text);
   }
+});
+
+test("recalls explicit user facts with their original spelling and latest correction", () => {
+  const history = turns(
+    "My bird's name is Ember. Reply only OK.", "OK.",
+    "Actually, my bird's name is Fern now.", "That's lovely.",
+  );
+  assert.equal(explicitFactReply("What is my bird’s name? Reply with just the name.", history), "Fern");
+  assert.equal(explicitFactReply("What is my bird's name?", history.slice(0, 2)), "Ember");
+  assert.equal(explicitFactReply("What is my bird's name?", []), undefined);
+  assert.equal(explicitFactReply("What is my bird's name?", [
+    ...history, ...turns("My bird's name isn't Fern.", "Got it."),
+  ]), undefined);
+  assert.equal(explicitFactReply("What is my bird's name? Then write a poem.", history), undefined);
 });
 
 test("preserves completed or legacy turns and skips partial replies", () => {
@@ -48,7 +64,7 @@ test("keeps recent turns and retrieves an older relevant user detail within the 
   assert.match(prompt, /unrelated turn11/);
   assert.doesNotMatch(prompt, /unrelated turn0 /);
   assert.ok(prompt.indexOf("marigold") < prompt.indexOf("unrelated turn11"));
-  assert.match(prompt, /What is the telescope code\?<\|im_end\|>\n<\|im_start\|>assistant\n$/);
+  assert.ok(prompt.endsWith("What is the telescope code?<|im_end|>\n" + START_ASSISTANT));
   assert.ok(wordCount(prompt) <= 165);
 });
 

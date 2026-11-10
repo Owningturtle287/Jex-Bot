@@ -1,9 +1,10 @@
 import { CONTEXT_TOKENS, REPLY_TOKENS } from "./model-settings.mjs";
 
-const SYSTEM = "You are Jex Bot, an on-device AI assistant powered by Qwen. If asked who you are, give your name. " +
+const SYSTEM = "You are Jex Bot, an on-device AI assistant. Your name is Jex Bot. " +
   "Answer directly and keep simple answers brief. Quote recalled names and details exactly as the user wrote them. " +
   "Use the user's latest correction. If challenged, check your last answer. Ask for clarification when needed.";
-const START_ASSISTANT = "<|im_start|>assistant\n";
+// Qwen3's non-thinking chat template starts replies after an empty think block.
+export const START_ASSISTANT = "<|im_start|>assistant\n<think>\n\n</think>\n\n";
 const COMMON = new Set("about after again before could does from have into just like more much please should tell than that their them then there these they this those want were what when where which while will with would your".split(" "));
 
 function words(text) {
@@ -12,7 +13,8 @@ function words(text) {
 
 function render(role, text) {
   // Keep literal role markers in typed or pasted text from becoming control tokens.
-  return "<|im_start|>" + role + "\n" + text.replaceAll("<|", "‹|") + "<|im_end|>\n";
+  const content = text.replace(/<(?=\||\/?think>)/g, "‹");
+  return "<|im_start|>" + role + "\n" + content + "<|im_end|>\n";
 }
 
 function relevance(text, queryWords) {
@@ -51,7 +53,7 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
 
   const selected = new Map();
   const costs = new Map();
-  const recentFloor = Math.min(512, Math.floor(remaining / 4));
+  const recallReserve = Math.min(512, Math.floor(remaining / 4));
   const pairAt = index => render("user", messages[index].text) + render("assistant", messages[index + 1].text);
   const keep = async (index, reserve = 0) => {
     const pair = pairAt(index);
@@ -64,7 +66,7 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
   };
 
   let index = messages.length - 3;
-  while (index >= 0 && await keep(index, selected.size < 2 ? 0 : recentFloor)) index -= 2;
+  while (index >= 0 && await keep(index, selected.size < 2 ? 0 : recallReserve)) index -= 2;
 
   const queryWords = words(latest);
   const candidates = [];

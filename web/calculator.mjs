@@ -5,7 +5,7 @@ const MAX_MAGNITUDE = 1e15;
 function calculate(text) {
   const expression = text.toLowerCase().replaceAll("’", "'").trim()
     .replace(/^(?:please\s+)?(?:(?:what(?:'s| is)|calculate|compute|evaluate)\s+|(?:how much is)\s+)/, "")
-    .replace(/(?:\s+please)?[?!=]*$/, "").trim()
+    .replace(/(?:\s+please)?[?=.]?$/, "").trim()
     .replace(/\b(plus|minus|times|multiplied\s+by|divided\s+by)\b/g, words => OPERATORS[words.split(/\s+/)[0]])
     .replace(/[×·]/g, "*").replaceAll("÷", "/").replaceAll("−", "-");
   if (expression.length > 160) return;
@@ -17,14 +17,17 @@ function calculate(text) {
 
   function value() {
     const token = tokens[position++];
-    if (token === "+" || token === "-") return (token === "-" ? -1 : 1) * value();
+    if (token === "+" || token === "-") {
+      const operand = value();
+      return operand && token === "-" ? [-operand[0], operand[1]] : operand;
+    }
     if (token === "(") {
       const result = sum();
-      return tokens[position++] === ")" ? result : NaN;
+      return tokens[position++] === ")" ? result : null;
     }
-    if (!NUMBER.test(token ?? "")) return NaN;
-    const number = Number(token);
-    return number < MAX_MAGNITUDE ? number : NaN;
+    if (!NUMBER.test(token ?? "") || Number(token) >= MAX_MAGNITUDE) return null;
+    const [whole, decimal = ""] = token.split(".");
+    return [BigInt(whole + decimal), 10n ** BigInt(decimal.length)];
   }
 
   function product() {
@@ -32,12 +35,17 @@ function calculate(text) {
     while (tokens[position] === "*" || tokens[position] === "/") {
       const operator = tokens[position++];
       const operand = value();
+      if (!result || !operand) return null;
+      const [left, leftDenominator] = result;
+      const [right, rightDenominator] = operand;
       operations++;
-      if (operator === "/" && operand === 0) {
+      if (operator === "/" && right === 0n) {
         dividedByZero = true;
-        result = 0;
+        result = [0n, 1n];
       } else {
-        result = operator === "*" ? result * operand : result / operand;
+        result = operator === "*"
+          ? [left * right, leftDenominator * rightDenominator]
+          : [left * rightDenominator, leftDenominator * right];
       }
     }
     return result;
@@ -48,15 +56,20 @@ function calculate(text) {
     while (tokens[position] === "+" || tokens[position] === "-") {
       const operator = tokens[position++];
       const operand = product();
+      if (!result || !operand) return null;
+      const [left, leftDenominator] = result;
+      const [right, rightDenominator] = operand;
+      const signedRight = operator === "+" ? right : -right;
       operations++;
-      result = operator === "+" ? result + operand : result - operand;
+      result = [left * rightDenominator + signedRight * leftDenominator, leftDenominator * rightDenominator];
     }
     return result;
   }
 
-  const result = sum();
-  if (position !== tokens.length || !operations || !Number.isFinite(result) ||
-      Math.abs(result) >= MAX_MAGNITUDE) return;
+  const fraction = sum();
+  if (position !== tokens.length || !operations || !fraction) return;
+  const result = Number(fraction[0]) / Number(fraction[1]);
+  if (!Number.isFinite(result) || Math.abs(result) >= MAX_MAGNITUDE) return;
   return {
     expression: tokens.join(" ").replace(/\( /g, "(").replace(/ \)/g, ")"),
     result: dividedByZero ? "Division by zero is undefined." : String(Number(result.toPrecision(15))),

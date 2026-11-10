@@ -1,6 +1,6 @@
 # Jex Bot
 
-Jex Bot is an installable chatbot that generates replies on your device and saves separate conversations in the browser. Jex v3 uses the pretrained, instruction-tuned Qwen2.5-0.5B model through WebAssembly. The original custom Jex v2 model is available as Lite.
+Jex Bot is an installable chatbot that generates replies on your device and saves separate conversations in the browser. Jex v3 uses the pretrained, instruction-tuned Qwen3-0.6B model through WebAssembly. The original custom Jex v2 model is available as Lite.
 
 [Open Jex Bot](https://owningturtle287.github.io/Jex-Bot/).
 
@@ -8,7 +8,7 @@ Saved conversations appear on the left, ordered by the latest message. On a phon
 
 ## Run the app
 
-On the first visit, choose **Get Jex v3 (429 MB)**. The model is downloaded once and can be reopened offline while the browser retains its data. Choose **Use Lite** for the smaller, less capable Jex v2 model. Both modes use the same saved conversations and local calculator.
+On the first visit, choose **Get Jex v3 (484 MB)**. The model is downloaded once and can be reopened offline while the browser retains its data. Choose **Use Lite** for the smaller, less capable Jex v2 model. Both modes use the same saved conversations and local calculator.
 
 To run the app locally, use Node.js 20 or later, Python 3, and curl.
 
@@ -22,7 +22,9 @@ Open [localhost:8000](http://localhost:8000). The build verifies the pinned Qwen
 
 Jex needs no inference server, account, or API key. A phone needs an HTTPS copy of the built `web/` directory to install it. On iPhone, use Safari → Share → Add to Home Screen. On Android, use your browser’s Install app or Add to Home screen menu.
 
-Jex v3 uses a 4,096-token context, prioritizes recent turns, and retrieves relevant older turns from the current chat when the full history no longer fits. A new chat starts with its own history. The [upstream Qwen model card](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF) describes the model and its training. The GGUF is distributed under the [Apache 2.0 license](web/model/Qwen-LICENSE.txt). The [Jex v2 model card](docs/model-card.md) covers the custom model's training and evaluation.
+Jex v3 uses a 4,096-token context, prioritizes recent turns, and retrieves relevant older turns from the current chat when the full history no longer fits. It can answer direct questions about explicitly stated details, such as a name or favorite color, from the saved conversation. A new chat starts with its own history. The [upstream Qwen3 model card](https://huggingface.co/Qwen/Qwen3-0.6B) describes the model and its training. Jex uses [Bartowski's Q4_K_M quantization](https://huggingface.co/bartowski/Qwen_Qwen3-0.6B-GGUF) under the [Apache 2.0 license](web/model/Qwen-LICENSE.txt). The [Jex v2 model card](docs/model-card.md) covers the custom model's training and evaluation.
+
+To evaluate the real browser runtime, start the local server, install Python Playwright with `pip install playwright`, then run `playwright install chromium` and `python scripts/evaluate-web.py`. The evaluator prints each reply alongside its pattern checks for manual review.
 
 ## Custom Jex model configurations
 

@@ -3,7 +3,7 @@ const PREFIX = "jex-bot-";
 const CACHE = PREFIX + "v4";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.mjs", "./chats.mjs", "./engine.mjs", "./worker.mjs",
-  "./calculator.mjs", "./model-context.mjs", "./model-settings.mjs", "./local-model.mjs",
+  "./calculator.mjs", "./facts.mjs", "./model-context.mjs", "./model-settings.mjs", "./local-model.mjs",
   "./vendor/wllama-2.4.0/index.js", "./vendor/wllama-2.4.0/single-thread/wllama.wasm",
   "./vendor/wllama-2.4.0/multi-thread/wllama.wasm",
   "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",

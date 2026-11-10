@@ -1,0 +1,28 @@
+const SUBJECT = "[\\p{L}\\p{N}'’ -]{1,64}";
+const QUESTION = new RegExp(
+  "^(?:what(?:'s| is)|can you recall) my (" + SUBJECT + "?)\\??" +
+  "(?:\\s+reply with (?:just|only) the (?:name|value)\\.?)?$", "iu",
+);
+const STATEMENT = new RegExp(
+  "^(?:actually,?\\s+)?(?:(?:please\\s+)?remember (?:that )?)?my (" + SUBJECT + "?)\\s+(is|isn['’]t)\\s+(.+)$", "iu",
+);
+const normalize = text => text.replaceAll("’", "'").replace(/\s+/g, " ").trim();
+
+export function explicitFactReply(question, history) {
+  const request = QUESTION.exec(normalize(question));
+  if (!request) return;
+  const subject = request[1].toLowerCase();
+  for (let index = history.length - 1; index >= 0; index--) {
+    const message = history[index];
+    if (message.role !== "user") continue;
+    const sentences = message.text.split(/(?<=[.!?])\s+|\n+/);
+    for (const sentence of sentences.reverse()) {
+      const text = sentence.trim();
+      const statement = STATEMENT.exec(text);
+      if (!statement || normalize(statement[1]).toLowerCase() !== subject || text.endsWith("?")) continue;
+      const value = statement[3].replace(/[.!]+$/, "").replace(/\s+now$/i, "").trim();
+      if (statement[2].toLowerCase() !== "is" || /^(?:not\b|unknown$)/i.test(value)) return;
+      return value;
+    }
+  }
+}

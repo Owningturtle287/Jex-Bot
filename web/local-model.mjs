@@ -1,4 +1,4 @@
-import { buildPrompt } from "./model-context.mjs";
+import { buildPrompt, START_ASSISTANT } from "./model-context.mjs";
 import { CONTEXT_TOKENS, MODEL_BYTES, MODEL_FILE, MODEL_NAME, REPLY_TOKENS } from "./model-settings.mjs";
 
 const modelURL = new URL("./model/" + MODEL_FILE, import.meta.url).href;
@@ -37,14 +37,15 @@ export async function loadLocalModel({ allowDownload, onProgress }) {
         const prompt = await buildPrompt(messages, async text => (await llama.tokenize(text)).length);
         if (signal.aborted) return;
         // Reuse KV state only when there is new input to produce fresh logits.
-        const useCache = !!previousPrompt && prompt.length > previousPrompt.length && prompt.startsWith(previousPrompt);
+        const useCache = !!previousPrompt && prompt.length > previousPrompt.length &&
+          prompt.startsWith(previousPrompt.slice(0, -START_ASSISTANT.length));
         previousPrompt = "";
         const decoder = new TextDecoder();
         await llama.createCompletion(prompt, {
           nPredict: REPLY_TOKENS,
           useCache,
           abortSignal: signal,
-          sampling: { temp: 0.1, top_k: 20, top_p: 0.9, penalty_repeat: 1.08 },
+          sampling: { temp: 0.7, top_k: 20, top_p: 0.8, penalty_repeat: 1.08 },
           onNewToken(_id, bytes) {
             const text = decoder.decode(bytes, { stream: true });
             if (!signal.aborted && text) onText(text);
