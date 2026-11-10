@@ -1,9 +1,9 @@
 const PREFIX = "jex-bot-";
 // Bump this when publishing changes to the app shell or model.
-const CACHE = PREFIX + "v4";
+const CACHE = PREFIX + "v5";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.mjs", "./chats.mjs", "./engine.mjs", "./worker.mjs",
-  "./calculator.mjs", "./facts.mjs", "./model-context.mjs", "./model-settings.mjs", "./local-model.mjs",
+  "./calculator.mjs", "./facts.mjs", "./model-context.mjs", "./model-settings.mjs", "./local-model.mjs", "./model-download.mjs",
   "./vendor/wllama-2.4.0/index.js", "./vendor/wllama-2.4.0/single-thread/wllama.wasm",
   "./vendor/wllama-2.4.0/multi-thread/wllama.wasm",
   "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",
@@ -34,7 +34,7 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET" || !request.url.startsWith(self.registration.scope)) return;
-  // The inference runtime streams the large GGUF into its own persistent cache.
+  // The download worker persists model ranges in its own cache.
   if (new URL(request.url).pathname.endsWith(".gguf")) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);

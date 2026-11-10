@@ -247,7 +247,8 @@ async function connect(nextMode, allowDownload = false) {
     connecting = false;
     if (localModel) modelReady(localModel.name);
     else state("setup", "Choose a model to start");
-  } catch {
+  } catch (error) {
+    console.warn("Couldn’t start Jex model", error);
     connecting = false;
     state("error", mode === "lite" ? "Lite model unavailable" : "Couldn’t start Jex v3");
   }
