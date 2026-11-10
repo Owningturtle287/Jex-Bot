@@ -1,9 +1,22 @@
-import { MODEL_BYTES, MODEL_FILE } from "./model-settings.mjs";
+import { MODEL_BYTES, MODEL_FILE, MODEL_SOURCE } from "./model-settings.mjs";
 
 export const CACHE_DIRECTORY = "jex-models";
 const PART_BYTES = 16 * 1024 * 1024;
 
-// GitHub Pages supports range requests. A local server may return the full file.
+export function modelFetcher(fetchAsset) {
+  let useModelHost = false;
+  return async (url, options) => {
+    if (!useModelHost) {
+      const response = await fetchAsset(url, options);
+      if (response.status !== 404) return response;
+      await response.body?.cancel();
+      useModelHost = true;
+    }
+    return fetchAsset(MODEL_SOURCE, { ...options, credentials: "omit" });
+  };
+}
+
+// The pinned model host supports ranges. A local server may return the full file.
 export async function transferModel(file, url, size, fetchPart, onProgress, partBytes = PART_BYTES) {
   let offset = file.getSize();
   if (offset > size) {
@@ -58,7 +71,7 @@ if (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScop
       const file = await handle.createSyncAccessHandle();
       try {
         let percent = -1;
-        await transferModel(file, url, MODEL_BYTES, fetch, loaded => {
+        await transferModel(file, url, MODEL_BYTES, modelFetcher(fetch), loaded => {
           const next = Math.floor(loaded / MODEL_BYTES * 100);
           if (next === percent) return;
           percent = next;

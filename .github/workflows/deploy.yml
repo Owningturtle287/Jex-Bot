@@ -37,7 +37,7 @@ jobs:
       - name: Build browser runtime and verify pinned Qwen weights
         run: |
           npm ci --ignore-scripts
-          npm run build:web
+          npm run build:web -- --cdn-model
 
       - name: Verify app and model
         run: |

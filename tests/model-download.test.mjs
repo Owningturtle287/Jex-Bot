@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { transferModel } from "../web/model-download.mjs";
+import { modelFetcher, transferModel } from "../web/model-download.mjs";
+import { MODEL_SOURCE } from "../web/model-settings.mjs";
 
 function memoryFile(initial = []) {
   const bytes = [...initial];
@@ -53,4 +54,20 @@ test("rejects an HTTP error or a response for the wrong range", async () => {
       async () => response, () => {}, 2), /Unexpected model download response/);
     assert.deepEqual(file.bytes, [1, 2]);
   }
+});
+
+test("switches to the pinned model host when the app does not serve the weights", async () => {
+  const urls = [];
+  const local = "https://example.test/model.gguf";
+  const fetchPart = modelFetcher(async (url, options) => {
+    urls.push(url);
+    if (url === local) return new Response("Missing", { status: 404 });
+    assert.equal(options.credentials, "omit");
+    assert.equal(options.headers.Range, "bytes=0-1");
+    return partial([1, 2], "bytes 0-1/2");
+  });
+  const options = { headers: { Range: "bytes=0-1" } };
+  await fetchPart(local, options);
+  await fetchPart(local, options);
+  assert.deepEqual(urls, [local, MODEL_SOURCE, MODEL_SOURCE]);
 });

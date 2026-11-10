@@ -3,13 +3,13 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { copyFile, mkdir, rename, rm, stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { MODEL_BYTES, MODEL_DOWNLOAD_MB, MODEL_FILE } from "../web/model-settings.mjs";
+import { MODEL_BYTES, MODEL_DOWNLOAD_MB, MODEL_FILE, MODEL_SOURCE } from "../web/model-settings.mjs";
 
 const root = new URL("../", import.meta.url);
 const vendor = new URL("web/vendor/wllama-2.4.0/", root);
 const upstream = new URL("node_modules/@wllama/wllama/", root);
-const model = new URL("web/model/" + MODEL_FILE, root);
-const modelURL = "https://huggingface.co/bartowski/Qwen_Qwen3-0.6B-GGUF/resolve/60b85c0e3d8fe0f6474f406922a26d12aca4550d/Qwen_Qwen3-0.6B-Q4_K_M.gguf";
+const modelDirectory = new URL(process.argv.includes("--cdn-model") ? "node_modules/.cache/jex/" : "web/model/", root);
+const model = new URL(MODEL_FILE, modelDirectory);
 const modelHash = "9acfc1e001311f34b4252001b626f2e466d592a42065f66571bff3790d4e1b14";
 
 for (const path of ["single-thread/", "multi-thread/"]) {
@@ -32,6 +32,7 @@ async function verify(file) {
 }
 
 if (!process.argv.includes("--runtime-only") && !await verify(model)) {
+  await mkdir(modelDirectory, { recursive: true });
   const temporary = new URL(MODEL_FILE + ".part", model);
   try {
     if (process.env.JEX_MODEL_FILE) {
@@ -40,7 +41,7 @@ if (!process.argv.includes("--runtime-only") && !await verify(model)) {
       console.log("Downloading and verifying the " + MODEL_DOWNLOAD_MB + " MB Qwen model…");
       const { status, error } = spawnSync("curl", [
         "--fail", "--location", "--silent", "--show-error", "--retry", "3", "--max-time", "240",
-        "--output", fileURLToPath(temporary), modelURL,
+        "--output", fileURLToPath(temporary), MODEL_SOURCE,
       ], { stdio: "inherit" });
       if (error || status !== 0) throw error ?? new Error("Model download failed");
     }
