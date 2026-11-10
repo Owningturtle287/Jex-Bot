@@ -7,9 +7,9 @@ export function modelFetcher(fetchAsset) {
   let useModelHost = false;
   return async (url, options) => {
     if (!useModelHost) {
-      const response = await fetchAsset(url, options);
-      if (response.status !== 404) return response;
-      await response.body?.cancel();
+      const response = await fetchAsset(url, options).catch(() => null);
+      if (response?.ok) return response;
+      await response?.body?.cancel();
       useModelHost = true;
     }
     return fetchAsset(MODEL_SOURCE, { ...options, credentials: "omit" });
@@ -35,7 +35,8 @@ export async function transferModel(file, url, size, fetchPart, onProgress, part
     } else if (response.status !== 206 ||
         response.headers.get("content-range") !== "bytes " + offset + "-" + end + "/" + size) {
       await response.body?.cancel();
-      throw new Error("Unexpected model download response (HTTP " + response.status + ")");
+      const host = new URL(response.url || url).hostname;
+      throw new Error("Unexpected model download response from " + host + " (HTTP " + response.status + ")");
     }
     if (!response.body) throw new Error("Model response has no data");
     const start = offset;
