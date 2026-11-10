@@ -2,6 +2,9 @@ import {
   ACTIVE_KEY, chatTitle, contextMessages, createChat, migrateLegacy,
   openChatDatabase, readChats, sortedChats, writeChat,
 } from "./chats.mjs";
+import { arithmeticReply } from "./calculator.mjs";
+import { loadLocalModel } from "./local-model.mjs";
+import { MODEL_BYTES } from "./model-settings.mjs";
 
 const byId = id => document.getElementById(id);
 const form = byId("composer-form");
@@ -20,6 +23,9 @@ let saves = Promise.resolve();
 let storageReady = false;
 let active = null;
 let worker;
+let localModel;
+let mode;
+let connecting = false;
 let ready = false;
 let installPrompt;
 let waitingUpdate;
@@ -73,7 +79,9 @@ function update() {
   send.disabled = !ready || !storageReady || !!active || !prompt.value.trim();
   send.hidden = !!active;
   stop.hidden = !active;
-  byId("app-update").disabled = !!active;
+  byId("app-update").disabled = !!active || connecting;
+  byId("download-model").disabled = !!active;
+  byId("use-lite").disabled = !!active;
   chat.hidden = !list.childElementCount;
   byId("welcome").hidden = !chat.hidden;
   prompt.style.height = "44px";
@@ -116,7 +124,7 @@ function selectChat(thread) {
     if (historyDialog.open) historyDialog.close();
     return;
   }
-  if (active) worker.postMessage({ type: "stop" });
+  stopGeneration();
   current = thread;
   rememberSelection();
   list.replaceChildren();
@@ -131,7 +139,8 @@ function selectChat(thread) {
 function state(value, label) {
   byId("connection").dataset.state = value;
   byId("connection-label").textContent = label;
-  byId("retry").hidden = value !== "error";
+  byId("download-model").hidden = value === "loading" || (ready && mode === "local");
+  byId("use-lite").hidden = value === "loading" || (ready && mode === "lite");
   update();
 }
 
@@ -139,61 +148,106 @@ function finish(error, canceled) {
   if (!active) return;
   const { thread, message } = active;
   message.text = message.text.trim();
+  error ||= !canceled && !message.text;
   message.status = error ? "error" : canceled ? "stopped" : "complete";
   persist(thread);
   if (current.id === thread.id) {
     list.replaceChildren();
     for (const item of current.messages) addMessage(item);
-    byId("announcement").textContent = "Jex Bot: " + (message.text || "Reply interrupted.");
+    byId("announcement").textContent = "Jex Bot: " + (message.text ||
+      (error ? "Generation failed." : "Reply interrupted."));
   }
   active = null;
   update();
   scrollToLatest();
 }
 
-function connect() {
-  worker?.terminate();
+function addReplyText(text) {
+  active.message.text += text;
+  if (current.id === active.thread.id) {
+    const row = list.lastElementChild;
+    delete row.dataset.pending;
+    row.querySelector("p").textContent = active.message.text;
+    scrollToLatest();
+  }
+  if (performance.now() - active.savedAt > 500) {
+    persist(active.thread);
+    active.savedAt = performance.now();
+  }
+}
+
+function stopGeneration() {
+  if (!active) return;
+  active.controller.abort();
+  worker?.postMessage({ type: "stop" });
+}
+
+function modelReady(name) {
+  ready = true;
+  byId("model-name").textContent = name;
+  byId("welcome-model").textContent = name.toUpperCase();
+  try { localStorage.setItem("jex-model-mode", mode); } catch {}
+  state("ready", mode === "local" ? "Running on this device" : "Lite model · running on this device");
+}
+
+function startLite() {
+  const connection = new Worker(new URL("./worker.mjs", import.meta.url), { type: "module" });
+  worker = connection;
+  const unavailable = () => {
+    if (worker !== connection) return;
+    connecting = false;
+    ready = false;
+    finish(true, false);
+    state("error", "Lite model unavailable");
+  };
+  connection.addEventListener("error", unavailable);
+  connection.addEventListener("message", ({ data }) => {
+    if (worker !== connection) return;
+    if (data.type === "ready") {
+      connecting = false;
+      modelReady(data.name);
+    } else if (data.type === "unavailable") {
+      unavailable();
+    } else if (active && data.id === active.id) {
+      if (data.type === "delta" && !active.controller.signal.aborted) addReplyText(data.text);
+      if (data.type === "done" || data.type === "error") {
+        finish(data.type === "error", data.canceled || active.controller.signal.aborted);
+      }
+    }
+  });
+}
+
+async function connect(nextMode, allowDownload = false) {
+  if (active || connecting) return;
+  connecting = true;
   ready = false;
+  mode = nextMode;
   state("loading", "Loading Jex…");
   try {
-    const connection = new Worker(new URL("./worker.mjs", import.meta.url), { type: "module" });
-    worker = connection;
-    const unavailable = () => {
-      if (worker !== connection) return;
-      ready = false;
-      finish(true, false);
-      state("error", "Model unavailable");
-    };
-    connection.addEventListener("error", unavailable);
-    connection.addEventListener("message", ({ data }) => {
-      if (worker !== connection) return;
-      if (data.type === "ready") {
-        ready = true;
-        byId("model-name").textContent = data.name;
-        byId("welcome-model").textContent = data.name.toUpperCase();
-        state("ready", "Running on this device");
-      } else if (data.type === "unavailable") {
-        unavailable();
-      } else if (active && data.id === active.id) {
-        if (data.type === "delta") {
-          active.message.text += data.text;
-          if (current.id === active.thread.id) {
-            const row = list.lastElementChild;
-            delete row.dataset.pending;
-            row.querySelector("p").textContent = active.message.text;
-            scrollToLatest();
-          }
-          if (performance.now() - active.savedAt > 500) {
-            persist(active.thread);
-            active.savedAt = performance.now();
-          }
-        } else if (data.type === "done" || data.type === "error") {
-          finish(data.type === "error", data.canceled);
-        }
-      }
+    worker?.terminate();
+    worker = undefined;
+    await localModel?.close();
+    localModel = undefined;
+    if (mode === "lite") {
+      startLite();
+      return;
+    }
+    let percent = -1;
+    localModel = await loadLocalModel({
+      allowDownload,
+      onProgress({ loaded }) {
+        const next = Math.min(100, Math.floor(loaded / MODEL_BYTES * 100));
+        if (next === percent || !Number.isFinite(next)) return;
+        percent = next;
+        state("loading", next === 100 ? "Starting Jex v3…" : "Downloading Jex v3 · " + next + "%");
+      },
     });
+    connecting = false;
+    if (localModel) modelReady(localModel.name);
+    else state("setup", "Choose a model to start");
   } catch {
-    state("error", "Model unavailable");
+    connecting = false;
+    state("error", mode === "lite" ? "Lite model unavailable" : "Couldn’t start Jex v3");
   }
 }
 
@@ -206,7 +260,9 @@ form.addEventListener("submit", event => {
   current.messages.push({ role: "user", text: user }, message);
   current.updatedAt = Math.max(Date.now(), current.updatedAt + 1);
   chats.set(current.id, current);
-  active = { id: crypto.randomUUID(), thread: current, message, savedAt: performance.now() };
+  active = {
+    id: crypto.randomUUID(), thread: current, message, savedAt: performance.now(), controller: new AbortController(),
+  };
   persist(current);
   rememberSelection();
   addMessage({ role: "user", text: user });
@@ -215,7 +271,20 @@ form.addEventListener("submit", event => {
   prompt.value = "";
   update();
   window.scrollTo(0, document.documentElement.scrollHeight);
-  worker.postMessage({ type: "chat", id: active.id, messages: [...context, { role: "user", text: user }] });
+  const messages = [...context, { role: "user", text: user }];
+  const arithmetic = arithmeticReply(messages);
+  if (arithmetic !== undefined) {
+    addReplyText(arithmetic);
+    finish(false, false);
+  } else if (localModel) {
+    const signal = active.controller.signal;
+    localModel.reply(messages, signal, addReplyText).then(
+      () => finish(false, signal.aborted),
+      () => finish(!signal.aborted, signal.aborted),
+    );
+  } else {
+    worker.postMessage({ type: "chat", id: active.id, messages });
+  }
 });
 prompt.addEventListener("input", update);
 prompt.addEventListener("keydown", event => {
@@ -224,8 +293,9 @@ prompt.addEventListener("keydown", event => {
     form.requestSubmit();
   }
 });
-stop.addEventListener("click", () => worker.postMessage({ type: "stop" }));
-byId("retry").addEventListener("click", connect);
+stop.addEventListener("click", stopGeneration);
+byId("download-model").addEventListener("click", () => connect("local", true));
+byId("use-lite").addEventListener("click", () => connect("lite"));
 function newChat() {
   selectChat(createChat());
   prompt.focus();
@@ -303,10 +373,12 @@ if ("serviceWorker" in navigator) {
   }).catch(() => {});
 }
 byId("app-update").addEventListener("click", async () => {
-  if (!waitingUpdate || active) return;
+  if (!waitingUpdate || active || connecting) return;
   await saves;
   applyingUpdate = true;
   waitingUpdate.postMessage({ type: "SKIP_WAITING" });
 });
 loadHistory();
-connect();
+let previousMode;
+try { previousMode = localStorage.getItem("jex-model-mode"); } catch {}
+connect(previousMode === "lite" ? "lite" : "local");

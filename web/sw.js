@@ -1,8 +1,11 @@
 const PREFIX = "jex-bot-";
 // Bump this when publishing changes to the app shell or model.
-const CACHE = PREFIX + "v3";
+const CACHE = PREFIX + "v4";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.mjs", "./chats.mjs", "./engine.mjs", "./worker.mjs",
+  "./calculator.mjs", "./model-context.mjs", "./model-settings.mjs", "./local-model.mjs",
+  "./vendor/wllama-2.4.0/index.js", "./vendor/wllama-2.4.0/single-thread/wllama.wasm",
+  "./vendor/wllama-2.4.0/multi-thread/wllama.wasm",
   "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",
   "./icons/jex-192.png", "./icons/jex-512.png",
 ];
@@ -31,6 +34,8 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET" || !request.url.startsWith(self.registration.scope)) return;
+  // The inference runtime streams the large GGUF into its own persistent cache.
+  if (new URL(request.url).pathname.endsWith(".gguf")) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const key = request.mode === "navigate" ? new URL("./index.html", self.registration.scope) : request;

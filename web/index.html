@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f8f7fc">
-  <meta name="description" content="An experimental English chatbot trained from scratch. Replies are generated on your device.">
+  <meta name="description" content="An on-device AI chatbot with local conversation history.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Jex Bot</title>
   <link rel="icon" href="./icons/jex-64.png">
@@ -51,7 +51,7 @@
       <div class="mark"><img src="./icons/jex-192.png" alt="" width="80" height="80"></div>
       <div class="eyebrow"><span id="welcome-model">JEX</span> <span>·</span> ENGLISH</div>
       <h1 id="welcome-title">Meet Jex Bot.</h1>
-      <p>A small English chatbot trained from scratch.<br class="desktop-only"> Start with a simple question or just say hello.</p>
+      <p>An AI chatbot that runs on your device.<br class="desktop-only"> Ask a question or pick up where you left off.</p>
       <div class="suggestions" aria-label="Suggested prompts">
         <button type="button" data-prompt="What is your name?"><span>01</span> Get to know Jex <b aria-hidden="true">↗</b></button>
         <button type="button" data-prompt="Explain gravity in simple words."><span>02</span> Ask about gravity <b aria-hidden="true">↗</b></button>
@@ -67,8 +67,9 @@
     </section>
     <section class="composer" aria-label="Message controls">
       <div id="connection" class="connection" data-state="loading" role="status">
-        <span class="indicator"></span><span id="connection-label">Loading Jex Pilot…</span>
-        <button id="retry" type="button" hidden>Retry</button>
+        <span class="indicator"></span><span id="connection-label">Loading Jex…</span>
+        <button id="download-model" type="button" hidden>Get Jex v3 (429 MB)</button>
+        <button id="use-lite" type="button" hidden>Use Lite</button>
         <button id="app-update" type="button" hidden>Update ready</button>
       </div>
       <form id="composer-form">
@@ -82,7 +83,7 @@
         </button>
       </form>
       <p id="save-status" class="save-status" role="status" hidden></p>
-      <p class="fine-print">Early model. Replies may be inaccurate. Chats stay in this browser.</p>
+      <p class="fine-print">Chats stay in this browser. Replies can be inaccurate.</p>
     </section>
   </main>
   </div>

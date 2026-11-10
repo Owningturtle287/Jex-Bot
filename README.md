@@ -1,6 +1,6 @@
 # Jex Bot
 
-Jex Bot is an experimental English chatbot trained from random weights. The first release is a small model that runs inside an installable web app. It generates replies in a browser worker, saves separate conversations on the device, and can run offline after its first successful load.
+Jex Bot is an installable chatbot that generates replies on your device and saves separate conversations in the browser. Jex v3 uses the pretrained, instruction-tuned Qwen2.5-0.5B model through WebAssembly. The original custom Jex v2 model is available as Lite.
 
 [Open Jex Bot](https://owningturtle287.github.io/Jex-Bot/).
 
@@ -8,15 +8,23 @@ Saved conversations appear on the left, ordered by the latest message. On a phon
 
 ## Run the app
 
+On the first visit, choose **Get Jex v3 (429 MB)**. The model is downloaded once and can be reopened offline while the browser retains its data. Choose **Use Lite** for the smaller, less capable Jex v2 model. Both modes use the same saved conversations and local calculator.
+
+To run the app locally, use Node.js 20 or later, Python 3, and curl.
+
 ```sh
+npm ci --ignore-scripts
+npm run build:web
 python -m http.server 8000 --bind 127.0.0.1 --directory web
 ```
 
-Open [localhost:8000](http://localhost:8000). The bundled model needs no Python inference server, account, or API key. A phone needs an HTTPS copy of the `web/` directory to install it. On iPhone, use Safari → Share → Add to Home Screen. On Android, use your browser’s Install app or Add to Home screen menu.
+Open [localhost:8000](http://localhost:8000). The build verifies the pinned Qwen GGUF and places it alongside the browser runtime in `web/`. GitHub Pages uses the same build. If you already have the pinned GGUF, set `JEX_MODEL_FILE` to its path when building. Use `npm run build:web -- --runtime-only` for a Lite-only local build. Run `npm test` for the arithmetic and context regression tests.
 
-Try a short greeting, a question about gravity, or a request for a joke. See the [model card](docs/model-card.md) for the pilot’s evaluation results and known limits.
+Jex needs no inference server, account, or API key. A phone needs an HTTPS copy of the built `web/` directory to install it. On iPhone, use Safari → Share → Add to Home Screen. On Android, use your browser’s Install app or Add to Home screen menu.
 
-## Model configurations
+Jex v3 uses a 4,096-token context, prioritizes recent turns, and retrieves relevant older turns from the current chat when the full history no longer fits. A new chat starts with its own history. The [upstream Qwen model card](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF) describes the model and its training. The GGUF is distributed under the [Apache 2.0 license](web/model/Qwen-LICENSE.txt). The [Jex v2 model card](docs/model-card.md) covers the custom model's training and evaluation.
+
+## Custom Jex model configurations
 
 | Configuration | Parameters | Transformer blocks | Width | Attention heads | BPE vocabulary | Context |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -24,7 +32,7 @@ Try a short greeting, a question about gravity, or a request for a joke. See the
 | [Jex v2](configs/jex-v2.json) | 6,689,024 | 8 | 256 | 8 | 1,024 | 1,024 |
 | [Base](configs/base.json) | 42,742,272 | 12 | 512 | 8 | 8,192 | 1,024 |
 
-The decoder uses causal attention with rotary positions, RMSNorm, SwiGLU feed-forward layers, and a shared token embedding and output matrix. The browser ships with the quantized Jex v2 model. Base is the starting configuration for a separate GPU training run.
+The custom decoder uses causal attention with rotary positions, RMSNorm, SwiGLU feed-forward layers, and a shared token embedding and output matrix. Lite uses the quantized Jex v2 model. Base is the starting configuration for a separate GPU training run.
 
 ## Reproduce the Pilot
 

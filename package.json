@@ -1,0 +1,12 @@
+{
+  "name": "jex-bot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@wllama/wllama": "2.4.0"
+  }
+}
