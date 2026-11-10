@@ -32,11 +32,12 @@ test("recalls explicit user facts with their original spelling and latest correc
   );
   assert.equal(explicitFactReply("What is my bird’s name? Reply with just the name.", history), "Fern");
   assert.equal(explicitFactReply("What is my bird's name?", history.slice(0, 2)), "Ember");
-  assert.equal(explicitFactReply("What is my bird's name?", []), undefined);
+  assert.equal(explicitFactReply("What is my bird's name?", []), "You haven’t shared that in this chat.");
   assert.equal(explicitFactReply("What is my bird's name?", [
     ...history, ...turns("My bird's name isn't Fern.", "Got it."),
   ]), undefined);
   assert.equal(explicitFactReply("What is my bird's name? Then write a poem.", history), undefined);
+  assert.equal(explicitFactReply("What is my name?", turns("My name is Rowan and I enjoy climbing.")), undefined);
 });
 
 test("preserves completed or legacy turns and skips partial replies", () => {

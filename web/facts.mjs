@@ -11,6 +11,7 @@ const normalize = text => text.replaceAll("’", "'").replace(/\s+/g, " ").trim(
 export function explicitFactReply(question, history) {
   const request = QUESTION.exec(normalize(question));
   if (!request) return;
+  if (!history.some(message => message.role === "user")) return "You haven’t shared that in this chat.";
   const subject = request[1].toLowerCase();
   for (let index = history.length - 1; index >= 0; index--) {
     const message = history[index];
@@ -21,7 +22,8 @@ export function explicitFactReply(question, history) {
       const statement = STATEMENT.exec(text);
       if (!statement || normalize(statement[1]).toLowerCase() !== subject || text.endsWith("?")) continue;
       const value = statement[3].replace(/[.!]+$/, "").replace(/\s+now$/i, "").trim();
-      if (statement[2].toLowerCase() !== "is" || /^(?:not\b|unknown$)/i.test(value)) return;
+      if (statement[2].toLowerCase() !== "is" || /^(?:not\b|unknown$)/i.test(value) ||
+          /\b(?:and|but|although|because)\s+(?:i|we|he|she|they|it)\s+/i.test(value)) return;
       return value;
     }
   }
