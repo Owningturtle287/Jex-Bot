@@ -18,7 +18,7 @@ npm run build:web
 python -m http.server 8000 --bind 127.0.0.1 --directory web
 ```
 
-Open [localhost:8000](http://localhost:8000). The build verifies the pinned Qwen GGUF and places it alongside the browser runtime in `web/`. GitHub Pages uses the same build. If you already have the pinned GGUF, set `JEX_MODEL_FILE` to its path when building. Use `npm run build:web -- --runtime-only` for a Lite-only local build. Run `npm test` for the arithmetic and context regression tests.
+Open [localhost:8000](http://localhost:8000). The local build verifies the pinned Qwen GGUF and places it alongside the browser runtime in `web/`. GitHub Pages verifies the same weights during its build and the live app downloads them from the pinned model host. If you already have the pinned GGUF, set `JEX_MODEL_FILE` to its path when building. Use `npm run build:web -- --runtime-only` to skip prefetching the weights locally. Run `npm test` for the arithmetic, context, and download regression tests.
 
 Jex needs no inference server, account, or API key. A phone needs an HTTPS copy of the built `web/` directory to install it. On iPhone, use Safari → Share → Add to Home Screen. On Android, use your browser’s Install app or Add to Home screen menu.
 
