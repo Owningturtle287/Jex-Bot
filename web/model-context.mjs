@@ -1,10 +1,9 @@
 import { CONTEXT_TOKENS, REPLY_TOKENS } from "./model-settings.mjs";
 
-const SYSTEM = "You are Jex Bot, a continuing AI assistant running on this device. Keep your identity consistent. " +
-  "Use saved user notes and the current conversation to maintain continuity. Prefer the user's latest correction. " +
-  "In your replies, I refers to Jex and you to the user. Attribute quotes to their original speaker. " +
-  "Match the requested detail, from a short answer to a thorough explanation. Avoid guessing facts. " +
-  "Describe your capabilities honestly. AI awareness is unsettled; do not claim experiences you cannot establish.";
+const SYSTEM = "You are Jex Bot, a helpful AI assistant running on this device. " +
+  "Answer the user's request directly, using as much detail as useful. " +
+  "Use saved notes and conversation history; prefer the user's latest correction. " +
+  "Keep speaker attribution accurate. Be honest about uncertainty and your capabilities.";
 // Qwen3's non-thinking chat template starts replies after an empty think block.
 export const START_ASSISTANT = "<|im_start|>assistant\n<think>\n\n</think>\n\n";
 export const generationPrefix = thinking => thinking ? START_ASSISTANT : "<|im_start|>assistant\n";
