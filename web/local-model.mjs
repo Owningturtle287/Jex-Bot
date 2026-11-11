@@ -3,7 +3,7 @@ import { CACHE_DIRECTORY } from "./model-download.mjs";
 import { CONTEXT_TOKENS, MODEL_BYTES, MODEL_FILE, MODEL_NAME, REPLY_TOKENS } from "./model-settings.mjs";
 
 const modelURL = new URL("./model/" + MODEL_FILE, import.meta.url).href;
-const runtime = new URL("./vendor/wllama-2.4.0/", import.meta.url);
+const runtime = new URL("./vendor/wllama-2.3.7/", import.meta.url);
 
 function ignoreMissing(error) {
   if (error.name !== "NotFoundError") throw error;
@@ -47,20 +47,23 @@ async function openWeights(llama, allowDownload, onProgress) {
   return [downloaded];
 }
 
-export async function loadLocalModel({ allowDownload, onProgress }) {
+export async function loadLocalModel({ allowDownload, onProgress, onStatus }) {
   const { Wllama } = await import(new URL("index.js", runtime));
   const llama = new Wllama({
     "single-thread/wllama.wasm": new URL("single-thread/wllama.wasm", runtime).href,
     "multi-thread/wllama.wasm": new URL("multi-thread/wllama.wasm", runtime).href,
   }, { allowOffline: true, suppressNativeLog: true });
+  let stage = "prepare";
   try {
     const open = () => openWeights(llama, allowDownload, onProgress);
     const files = allowDownload && navigator.locks
       ? await navigator.locks.request("jex-download:" + modelURL, open)
       : await open();
     if (!files) return null;
+    stage = "startup";
+    onStatus?.("starting");
     await llama.loadModel(files, {
-      n_ctx: CONTEXT_TOKENS, n_batch: 128, n_threads: Math.min(4, navigator.hardwareConcurrency || 1),
+      n_ctx: CONTEXT_TOKENS, n_batch: 32, n_threads: Math.min(4, navigator.hardwareConcurrency || 1),
       n_gpu_layers: 0, seed: 42,
     });
     let previousPrompt = "";
@@ -92,6 +95,8 @@ export async function loadLocalModel({ allowDownload, onProgress }) {
     };
   } catch (error) {
     await llama.exit().catch(() => {});
-    throw error;
+    const failure = new Error(error.message || "Jex model setup failed", { cause: error });
+    failure.stage = stage;
+    throw failure;
   }
 }

@@ -26,6 +26,7 @@ let storageReady = false;
 let active = null;
 let worker;
 let localModel;
+let savedModel = false;
 let mode;
 let connecting = false;
 let ready = false;
@@ -142,6 +143,9 @@ function state(value, label) {
   byId("connection").dataset.state = value;
   byId("connection-label").textContent = label;
   downloadModel.hidden = value === "loading" || (ready && mode === "local");
+  downloadModel.textContent = savedModel
+    ? (value === "error" ? "Retry Jex v3" : "Start Jex v3")
+    : "Get Jex v3 (" + MODEL_DOWNLOAD_MB + " MB)";
   byId("use-lite").hidden = value === "loading" || (ready && mode === "lite");
   update();
 }
@@ -237,6 +241,10 @@ async function connect(nextMode, allowDownload = false) {
     let percent = -1;
     localModel = await loadLocalModel({
       allowDownload,
+      onStatus() {
+        savedModel = true;
+        state("loading", "Starting saved Jex v3…");
+      },
       onProgress({ loaded }) {
         const next = Math.min(100, Math.floor(loaded / MODEL_BYTES * 100));
         if (next === percent || !Number.isFinite(next)) return;
@@ -250,7 +258,10 @@ async function connect(nextMode, allowDownload = false) {
   } catch (error) {
     console.warn("Couldn’t start Jex model", error);
     connecting = false;
-    state("error", mode === "lite" ? "Lite model unavailable" : "Couldn’t start Jex v3");
+    const detail = error.stage === "startup"
+      ? "Jex v3 is saved but couldn’t start. Retry or use Lite."
+      : "Couldn’t prepare Jex v3. Retry or use Lite.";
+    state("error", mode === "lite" ? "Lite model unavailable" : detail);
   }
 }
 

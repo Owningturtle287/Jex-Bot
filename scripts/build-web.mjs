@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { MODEL_BYTES, MODEL_DOWNLOAD_MB, MODEL_FILE, MODEL_SOURCE } from "../web/model-settings.mjs";
 
 const root = new URL("../", import.meta.url);
-const vendor = new URL("web/vendor/wllama-2.4.0/", root);
+const vendor = new URL("web/vendor/wllama-2.3.7/", root);
 const upstream = new URL("node_modules/@wllama/wllama/", root);
 const modelDirectory = new URL(process.argv.includes("--cdn-model") ? "node_modules/.cache/jex/" : "web/model/", root);
 const model = new URL(MODEL_FILE, modelDirectory);
@@ -19,7 +19,6 @@ for (const path of ["index.js", "single-thread/wllama.wasm", "multi-thread/wllam
   await copyFile(new URL("esm/" + path, upstream), new URL(path, vendor));
 }
 await copyFile(new URL("LICENCE", upstream), new URL("LICENSE", vendor));
-await copyFile(new URL("node_modules/@huggingface/jinja/LICENSE", root), new URL("JINJA-LICENSE", vendor));
 
 async function verify(file) {
   const info = await stat(file).catch(error => {
