@@ -4,5 +4,8 @@
   {"label":"reported follow-up","turns":["What’s 2 plus 2","4","Lol that’s wrong","I checked again. 2 + 2 = 4.","What’s 12+1"],"checks":["^13[.!]?$"]},
   {"label":"new personal detail","turns":["My dog's name is Figwort.","That's a great name!","What is the name of my dog?"],"checks":["\\bFigwort\\b"]},
   {"label":"new corrected detail","turns":["The meeting is on Tuesday.","Okay.","It moved to Thursday.","Got it.","What day is the meeting now?"],"checks":["\\bThursday\\b"],"reject":["\\bTuesday\\b"]},
-  {"label":"new knowledge","turns":["Why do we see lightning before we hear thunder?"],"checks":["light","sound","faster"]}
+  {"label":"new knowledge","turns":["Why do we see lightning before we hear thunder?"],"checks":["light","sound","faster"]},
+  {"label":"reported zebra confusion","turns":["What is a zebra"],"checks":["mammal|horse|equid", "strip"],"reject":["finch|bird"]},
+  {"label":"reported first question attribution","turns":["Hey","Hello!","What are you","I am Jex Bot.","What's 2 + 2","4","What is a zebra","An African mammal with stripes.","What 3*6*32","576","What was the first question I asked you"],"checks":["Your first question", "What are you"],"reject":["I asked you"]},
+  {"label":"long response capacity","turns":["Explain how a seed grows into a tree in about 400 words, using six detailed paragraphs."],"checks":["seed", "root", "water", "leaf|leaves"],"minimum_words":260}
 ]

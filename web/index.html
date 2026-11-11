@@ -68,8 +68,9 @@
     <section class="composer" aria-label="Message controls">
       <div id="connection" class="connection" data-state="loading" role="status">
         <span class="indicator"></span><span id="connection-label">Loading Jex…</span>
-        <button id="download-model" type="button" hidden>Get Jex v3</button>
+        <button id="download-model" type="button" hidden>Get Jex v4</button>
         <button id="use-lite" type="button" hidden>Use Lite</button>
+        <button id="settings-open" type="button" aria-haspopup="dialog">Models &amp; memory</button>
         <button id="app-update" type="button" hidden>Update ready</button>
       </div>
       <form id="composer-form">
@@ -104,6 +105,23 @@
       <p>On Android, open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
       <button class="dialog-button">Done</button>
     </form>
+  </dialog>
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <div class="sidebar-heading">
+      <h2 id="settings-title">Models &amp; memory</h2>
+      <button id="settings-close" class="quiet" type="button" aria-label="Close settings">✕</button>
+    </div>
+    <h3>Choose a model</h3>
+    <div class="model-options">
+      <button type="button" data-model="local"><strong>Jex v4 · Standard</strong><span>0.6B parameters · 484 MB download. Uses your existing v3 download.</span></button>
+      <button type="button" data-model="strong"><strong>Jex v4 · Stronger</strong><span>1.5B parameters · 1,117 MB download. More capable, slower, and needs more memory. Some phones may need Standard.</span></button>
+      <button type="button" data-model="lite"><strong>Jex Lite</strong><span>Smallest download. Limited language and reasoning ability.</span></button>
+    </div>
+    <h3>Memory across chats</h3>
+    <label class="memory-toggle"><input id="memory-enabled" type="checkbox" checked> Use and save memory</label>
+    <p>Jex saves explicit details you share, such as “My name is Rowan,” “I prefer short answers,” or “Remember that…”. Notes stay in this browser. Review or remove them here.</p>
+    <p id="memory-summary" role="status"></p>
+    <ul id="memory-list" class="memory-list"></ul>
   </dialog>
   <div id="announcement" class="sr-only" role="status" aria-live="polite"></div>
 </body>

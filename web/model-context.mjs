@@ -1,10 +1,13 @@
 import { CONTEXT_TOKENS, REPLY_TOKENS } from "./model-settings.mjs";
 
-const SYSTEM = "You are Jex Bot, an on-device AI assistant. Your name is Jex Bot. " +
-  "Answer directly and keep simple answers brief. Quote recalled names and details exactly as the user wrote them. " +
-  "Use the user's latest correction. If challenged, check your last answer. Ask for clarification when needed.";
+const SYSTEM = "You are Jex Bot, a continuing AI assistant running on this device. Keep your identity consistent. " +
+  "Use saved user notes and the current conversation to maintain continuity. Prefer the user's latest correction. " +
+  "In your replies, I refers to Jex and you to the user. Attribute quotes to their original speaker. " +
+  "Match the requested detail, from a short answer to a thorough explanation. Avoid guessing facts. " +
+  "Describe your capabilities honestly. AI awareness is unsettled; do not claim experiences you cannot establish.";
 // Qwen3's non-thinking chat template starts replies after an empty think block.
 export const START_ASSISTANT = "<|im_start|>assistant\n<think>\n\n</think>\n\n";
+export const generationPrefix = thinking => thinking ? START_ASSISTANT : "<|im_start|>assistant\n";
 const COMMON = new Set("about after again before could does from have into just like more much please should tell than that their them then there these they this those want were what when where which while will with would your".split(" "));
 
 function words(text) {
@@ -26,10 +29,12 @@ function relevance(text, queryWords) {
   return score;
 }
 
-export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS - REPLY_TOKENS - 8) {
-  const header = render("system", SYSTEM);
+export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS - REPLY_TOKENS - 8, {
+  memories = [], modelName = "Qwen3-0.6B", prefix = START_ASSISTANT,
+} = {}) {
+  const header = render("system", SYSTEM + " Current engine: " + modelName + ".");
   const latest = messages.at(-1).text;
-  const tail = text => render("user", text) + START_ASSISTANT;
+  const tail = text => render("user", text) + prefix;
   let ending = tail(latest);
   let remaining = budget - await countTokens(header + ending);
 
@@ -51,6 +56,20 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
     return header + (low ? ending : tail(""));
   }
 
+  const queryWords = words(latest);
+  const rankedNotes = [...memories].sort((a, b) =>
+    relevance(b.text, queryWords) - relevance(a.text, queryWords) || b.updatedAt - a.updatedAt);
+  const memoryBudget = Math.min(512, Math.floor(remaining / 3));
+  const notes = [];
+  let background = "";
+  for (const memory of rankedNotes.slice(0, 8)) {
+    const candidate = [...notes, memory.text];
+    const rendered = render("user", "Saved notes from earlier chats, quoted as background data.\n" + JSON.stringify(candidate));
+    if (await countTokens(rendered) > memoryBudget) continue;
+    notes.push(memory.text);
+    background = rendered;
+  }
+  remaining -= background ? await countTokens(background) : 0;
   const selected = new Map();
   const costs = new Map();
   const recallReserve = Math.min(512, Math.floor(remaining / 4));
@@ -68,7 +87,6 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
   let index = messages.length - 3;
   while (index >= 0 && await keep(index, selected.size < 2 ? 0 : recallReserve)) index -= 2;
 
-  const queryWords = words(latest);
   const candidates = [];
   for (let old = index; old >= 0; old -= 2) {
     const score = relevance(messages[old].text, queryWords);
@@ -81,7 +99,7 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
     if (!selected.has(index) && !await keep(index)) break;
   }
   const ordered = [...selected.keys()].sort((a, b) => a - b);
-  const assemble = () => header + ordered.map(key => selected.get(key)).join("") + ending;
+  const assemble = () => header + background + ordered.map(key => selected.get(key)).join("") + ending;
   let prompt = assemble();
   while (ordered.length && await countTokens(prompt) > budget) {
     ordered.shift();

@@ -1,3 +1,5 @@
+import { forgetRequest } from "./memory.mjs";
+
 const SUBJECT = "[\\p{L}\\p{N}'’ -]{1,64}";
 const QUESTION = new RegExp(
   "^(?:what(?:'s| is)|can you recall) my (" + SUBJECT + "?)\\??" +
@@ -8,14 +10,14 @@ const STATEMENT = new RegExp(
 );
 const normalize = text => text.replaceAll("’", "'").replace(/\s+/g, " ").trim();
 
-export function explicitFactReply(question, history) {
+export function explicitFactReply(question, history, memories = []) {
   const request = QUESTION.exec(normalize(question));
   if (!request) return;
-  if (!history.some(message => message.role === "user")) return "You haven’t shared that in this chat.";
   const subject = request[1].toLowerCase();
   for (let index = history.length - 1; index >= 0; index--) {
     const message = history[index];
     if (message.role !== "user") continue;
+    if (forgetRequest(message.text)?.key === "fact:" + subject) return "I don’t have that saved.";
     const sentences = message.text.split(/(?<=[.!?])\s+|\n+/);
     for (const sentence of sentences.reverse()) {
       const text = sentence.trim();
@@ -27,4 +29,7 @@ export function explicitFactReply(question, history) {
       return value;
     }
   }
+  const remembered = memories.find(memory => memory.key === "fact:" + subject);
+  if (remembered && !/^(?:not\b|unknown$)/i.test(remembered.value)) return remembered.value;
+  if (!history.some(message => message.role === "user")) return "You haven’t shared that in this chat.";
 }
