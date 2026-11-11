@@ -14,6 +14,7 @@ export function explicitFactReply(question, history, memories = []) {
   const request = QUESTION.exec(normalize(question));
   if (!request) return;
   const subject = request[1].toLowerCase();
+  const remembered = memories.find(memory => memory.key === "fact:" + subject);
   for (let index = history.length - 1; index >= 0; index--) {
     const message = history[index];
     if (message.role !== "user") continue;
@@ -23,13 +24,16 @@ export function explicitFactReply(question, history, memories = []) {
       const text = sentence.trim();
       const statement = STATEMENT.exec(text);
       if (!statement || normalize(statement[1]).toLowerCase() !== subject || text.endsWith("?")) continue;
+      // A correction in another chat can be newer than this thread's transcript.
+      if (remembered && (!Number.isFinite(message.createdAt) || remembered.updatedAt >= message.createdAt)) {
+        return /^(?:not\b|unknown$)/i.test(remembered.value) ? undefined : remembered.value;
+      }
       const value = statement[3].replace(/[.!]+$/, "").replace(/\s+now$/i, "").trim();
       if (statement[2].toLowerCase() !== "is" || /^(?:not\b|unknown$)/i.test(value) ||
           /\b(?:and|but|although|because)\s+(?:i|we|he|she|they|it)\s+/i.test(value)) return;
       return value;
     }
   }
-  const remembered = memories.find(memory => memory.key === "fact:" + subject);
   if (remembered && !/^(?:not\b|unknown$)/i.test(remembered.value)) return remembered.value;
   if (!history.some(message => message.role === "user")) return "You haven’t shared that in this chat.";
 }
