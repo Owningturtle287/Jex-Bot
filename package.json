@@ -7,6 +7,6 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@wllama/wllama": "2.4.0"
+    "@wllama/wllama": "2.3.7"
   }
 }

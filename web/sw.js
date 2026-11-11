@@ -1,11 +1,11 @@
 const PREFIX = "jex-bot-";
 // Bump this when publishing changes to the app shell or model.
-const CACHE = PREFIX + "v7";
+const CACHE = PREFIX + "v8";
 const ASSETS = [
   "./", "./index.html", "./style.css", "./app.mjs", "./chats.mjs", "./engine.mjs", "./worker.mjs",
   "./calculator.mjs", "./facts.mjs", "./model-context.mjs", "./model-settings.mjs", "./local-model.mjs", "./model-download.mjs",
-  "./vendor/wllama-2.4.0/index.js", "./vendor/wllama-2.4.0/single-thread/wllama.wasm",
-  "./vendor/wllama-2.4.0/multi-thread/wllama.wasm",
+  "./vendor/wllama-2.3.7/index.js", "./vendor/wllama-2.3.7/single-thread/wllama.wasm",
+  "./vendor/wllama-2.3.7/multi-thread/wllama.wasm",
   "./manifest.webmanifest", "./icons/jex-64.png", "./icons/jex-180.png",
   "./icons/jex-192.png", "./icons/jex-512.png",
 ];
