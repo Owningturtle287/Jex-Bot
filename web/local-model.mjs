@@ -1,15 +1,14 @@
-import { buildPrompt, START_ASSISTANT } from "./model-context.mjs";
+import { buildPrompt, generationPrefix } from "./model-context.mjs";
 import { CACHE_DIRECTORY } from "./model-download.mjs";
-import { CONTEXT_TOKENS, MODEL_BYTES, MODEL_FILE, MODEL_NAME, REPLY_TOKENS } from "./model-settings.mjs";
+import { CONTEXT_TOKENS, MODELS, REPLY_TOKENS } from "./model-settings.mjs";
 
-const modelURL = new URL("./model/" + MODEL_FILE, import.meta.url).href;
 const runtime = new URL("./vendor/wllama-2.3.7/", import.meta.url);
 
 function ignoreMissing(error) {
   if (error.name !== "NotFoundError") throw error;
 }
 
-function downloadModel(onProgress) {
+function downloadModel(model, modelURL, onProgress) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL("./model-download.mjs", import.meta.url), { type: "module" });
     const fail = error => {
@@ -26,28 +25,32 @@ function downloadModel(onProgress) {
         onProgress?.(data);
       }
     };
-    worker.postMessage(modelURL);
+    worker.postMessage({ modelId: model.id, url: modelURL });
   });
 }
 
-async function openWeights(llama, allowDownload, onProgress) {
+async function openWeights(llama, model, modelURL, allowDownload, onProgress) {
   const root = await navigator.storage.getDirectory();
   const directory = await root.getDirectoryHandle(CACHE_DIRECTORY, { create: allowDownload }).catch(ignoreMissing);
-  const handle = await directory?.getFileHandle(MODEL_FILE).catch(ignoreMissing);
+  const handle = await directory?.getFileHandle(model.file).catch(ignoreMissing);
   const file = await handle?.getFile();
-  if (file?.size === MODEL_BYTES) return [file];
+  if (file?.size === model.bytes) return [file];
 
   // Reuse a complete download from the original v3 release.
-  const cached = (await llama.modelManager.getModels()).find(entry => entry.url === modelURL && entry.size === MODEL_BYTES);
+  const cached = (await llama.modelManager.getModels()).find(entry => entry.url === modelURL && entry.size === model.bytes);
   if (cached) return cached.open();
   if (!allowDownload) return null;
-  await downloadModel(onProgress);
-  const downloaded = await (await directory.getFileHandle(MODEL_FILE)).getFile();
-  if (downloaded.size !== MODEL_BYTES) throw new Error("Incomplete model download");
+  await downloadModel(model, modelURL, onProgress);
+  const downloaded = await (await directory.getFileHandle(model.file)).getFile();
+  if (downloaded.size !== model.bytes) throw new Error("Incomplete model download");
   return [downloaded];
 }
 
-export async function loadLocalModel({ allowDownload, onProgress, onStatus }) {
+export async function loadLocalModel({ modelId = "local", allowDownload, onProgress, onStatus }) {
+  const model = MODELS[modelId];
+  if (!model) throw new Error("Unknown model");
+  const modelURL = new URL("./model/" + model.file, import.meta.url).href;
+  const prefix = generationPrefix(model.thinkingTemplate);
   const { Wllama } = await import(new URL("index.js", runtime));
   const llama = new Wllama({
     "single-thread/wllama.wasm": new URL("single-thread/wllama.wasm", runtime).href,
@@ -58,7 +61,7 @@ export async function loadLocalModel({ allowDownload, onProgress, onStatus }) {
   });
   let stage = "prepare";
   try {
-    const open = () => openWeights(llama, allowDownload, onProgress);
+    const open = () => openWeights(llama, model, modelURL, allowDownload, onProgress);
     const files = allowDownload && navigator.locks
       ? await navigator.locks.request("jex-download:" + modelURL, open)
       : await open();
@@ -71,21 +74,25 @@ export async function loadLocalModel({ allowDownload, onProgress, onStatus }) {
     });
     let previousPrompt = "";
     return {
-      name: MODEL_NAME,
+      name: model.name,
       close: () => llama.exit(),
-      async reply(messages, signal, onText) {
-        const prompt = await buildPrompt(messages, async text => (await llama.tokenize(text)).length);
+      async reply(messages, signal, onText, memories = []) {
+        const prompt = await buildPrompt(
+          messages, async text => (await llama.tokenize(text)).length,
+          CONTEXT_TOKENS - REPLY_TOKENS - 8,
+          { memories, modelName: model.engine, prefix },
+        );
         if (signal.aborted) return;
         // Reuse KV state only when there is new input to produce fresh logits.
         const useCache = !!previousPrompt && prompt.length > previousPrompt.length &&
-          prompt.startsWith(previousPrompt.slice(0, -START_ASSISTANT.length));
+          prompt.startsWith(previousPrompt.slice(0, -prefix.length));
         previousPrompt = "";
         const decoder = new TextDecoder();
         await llama.createCompletion(prompt, {
           nPredict: REPLY_TOKENS,
           useCache,
           abortSignal: signal,
-          sampling: { temp: 0.7, top_k: 20, top_p: 0.8, penalty_repeat: 1.08 },
+          sampling: { temp: 0.4, top_k: 20, top_p: 0.85, penalty_repeat: 1.05 },
           onNewToken(_id, bytes) {
             const text = decoder.decode(bytes, { stream: true });
             if (!signal.aborted && text) onText(text);

@@ -138,3 +138,16 @@ dialog p { line-height: 1.5; color: var(--muted); }
 }
 
 .eyebrow #welcome-model { color: var(--purple); margin: 0; }
+#settings-dialog { width: 390px; max-height: calc(100dvh - 32px); overflow-y: auto; }
+#settings-dialog h3 { font-size: 15px; margin: 22px 0 12px; }
+#settings-dialog p { font-size: 13px; }
+.model-options { display: grid; gap: 8px; }
+.model-options button { display: grid; gap: 6px; text-align: left; padding: 13px; border: 1px solid var(--line); border-radius: 10px; background: #faf8ff; color: var(--ink); }
+.model-options button:hover { border-color: #a487db; }
+.model-options span { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.memory-toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.memory-toggle input { width: 18px; height: 18px; accent-color: var(--purple); }
+.memory-list { list-style: none; padding: 0; }
+.memory-list li { padding: 10px 0; border-top: 1px solid var(--line); }
+.memory-list p { margin: 0 0 8px; overflow-wrap: anywhere; }
+.memory-list button { background: #eee7fa; color: var(--purple); border: 0; border-radius: 6px; padding: 8px; font-size: 12px; }

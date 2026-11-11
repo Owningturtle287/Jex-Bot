@@ -1,9 +1,9 @@
-import { MODEL_BYTES, MODEL_FILE, MODEL_SOURCE } from "./model-settings.mjs";
+import { MODELS, MODEL_SOURCE } from "./model-settings.mjs";
 
 export const CACHE_DIRECTORY = "jex-models";
 const PART_BYTES = 16 * 1024 * 1024;
 
-export function modelFetcher(fetchAsset) {
+export function modelFetcher(fetchAsset, source = MODEL_SOURCE) {
   let useModelHost = false;
   return async (url, options) => {
     if (!useModelHost) {
@@ -12,7 +12,7 @@ export function modelFetcher(fetchAsset) {
       await response?.body?.cancel();
       useModelHost = true;
     }
-    return fetchAsset(MODEL_SOURCE, { ...options, credentials: "omit" });
+    return fetchAsset(source, { ...options, credentials: "omit" });
   };
 }
 
@@ -64,16 +64,19 @@ export async function transferModel(file, url, size, fetchPart, onProgress, part
 }
 
 if (typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope) {
-  self.onmessage = async ({ data: url }) => {
+  self.onmessage = async ({ data }) => {
     try {
+      const model = MODELS[typeof data === "string" ? "local" : data.modelId];
+      if (!model) throw new Error("Unknown model");
+      const url = typeof data === "string" ? data : data.url;
       const root = await navigator.storage.getDirectory();
       const directory = await root.getDirectoryHandle(CACHE_DIRECTORY, { create: true });
-      const handle = await directory.getFileHandle(MODEL_FILE, { create: true });
+      const handle = await directory.getFileHandle(model.file, { create: true });
       const file = await handle.createSyncAccessHandle();
       try {
         let percent = -1;
-        await transferModel(file, url, MODEL_BYTES, modelFetcher(fetch), loaded => {
-          const next = Math.floor(loaded / MODEL_BYTES * 100);
+        await transferModel(file, url, model.bytes, modelFetcher(fetch, model.source), loaded => {
+          const next = Math.floor(loaded / model.bytes * 100);
           if (next === percent) return;
           percent = next;
           postMessage({ loaded });

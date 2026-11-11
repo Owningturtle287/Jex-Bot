@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "@wllama/wllama": "2.3.7"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "6.2.5"
   }
 }

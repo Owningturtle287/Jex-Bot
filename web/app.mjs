@@ -1,11 +1,13 @@
 import {
   ACTIVE_KEY, chatTitle, contextMessages, createChat, migrateLegacy,
-  openChatDatabase, readChats, sortedChats, writeChat,
+  openChatDatabase, readChats, readMemories, sortedChats, writeChat, writeMemories,
 } from "./chats.mjs";
 import { arithmeticReply } from "./calculator.mjs";
 import { explicitFactReply } from "./facts.mjs";
+import { conversationRecall } from "./conversation-recall.mjs";
+import { forgetRequest, memoryChanges, memoryOverview } from "./memory.mjs";
 import { loadLocalModel } from "./local-model.mjs";
-import { MODEL_BYTES, MODEL_DOWNLOAD_MB } from "./model-settings.mjs";
+import { MODELS } from "./model-settings.mjs";
 
 const byId = id => document.getElementById(id);
 const form = byId("composer-form");
@@ -17,7 +19,12 @@ const stop = byId("stop");
 const install = byId("install");
 const downloadModel = byId("download-model");
 const historyDialog = byId("history-dialog");
+const settingsDialog = byId("settings-dialog");
 const chats = new Map();
+const memories = new Map();
+const savedModels = new Set();
+let memoryEnabled = true;
+try { memoryEnabled = localStorage.getItem("jex-memory-enabled") !== "false"; } catch {}
 const dateFormat = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 let current = createChat();
 let database;
@@ -26,8 +33,8 @@ let storageReady = false;
 let active = null;
 let worker;
 let localModel;
-let savedModel = false;
 let mode;
+let preferredModel = "local";
 let connecting = false;
 let ready = false;
 let installPrompt;
@@ -48,6 +55,51 @@ function persist(thread) {
       ? "This chat changed in another tab. Keep this tab open to preserve your unsaved changes."
       : "This browser couldn’t save the latest changes. Keep this tab open.");
   });
+}
+
+function saveMemoryChanges(changes) {
+  for (const change of changes) {
+    if (change.deleted) memories.delete(change.key);
+    else memories.set(change.key, change);
+  }
+  renderMemories();
+  if (!database || !changes.length) return;
+  saves = saves.then(() => writeMemories(database, changes)).catch(() => {
+    saveWarning("This browser couldn’t save the latest memory changes.");
+  });
+}
+
+function renderMemories() {
+  byId("memory-enabled").checked = memoryEnabled;
+  byId("memory-summary").textContent = memoryEnabled
+    ? memories.size + " saved notes can carry across chats on this device."
+    : "Memory is off. Saved notes aren’t used or updated.";
+  const items = [...memories.values()].sort((a, b) => b.updatedAt - a.updatedAt).map(memory => {
+    const item = document.createElement("li");
+    const text = document.createElement("p");
+    text.textContent = memory.text;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove saved note";
+    remove.addEventListener("click", () => saveMemoryChanges([
+      { key: memory.key, deleted: true, updatedAt: Date.now() },
+    ]));
+    item.append(text, remove);
+    return item;
+  });
+  byId("memory-list").replaceChildren(...items);
+}
+
+function rememberUser(thread, message) {
+  const removal = forgetRequest(message.text);
+  if (removal) {
+    const existed = memories.has(removal.key);
+    saveMemoryChanges([{ key: removal.key, deleted: true, updatedAt: message.createdAt }]);
+    return existed ? "I removed the saved note about your " + removal.subject + "." : "I don’t have that saved.";
+  }
+  if (memoryEnabled) saveMemoryChanges(memoryChanges(message.text, {
+    chatId: thread.id, messageId: message.id, at: message.createdAt,
+  }));
 }
 
 function rememberSelection() {
@@ -85,6 +137,7 @@ function update() {
   byId("app-update").disabled = !!active || connecting;
   downloadModel.disabled = !!active;
   byId("use-lite").disabled = !!active;
+  byId("settings-open").disabled = !!active || connecting;
   chat.hidden = !list.childElementCount;
   byId("welcome").hidden = !chat.hidden;
   prompt.style.height = "44px";
@@ -142,10 +195,11 @@ function selectChat(thread) {
 function state(value, label) {
   byId("connection").dataset.state = value;
   byId("connection-label").textContent = label;
-  downloadModel.hidden = value === "loading" || (ready && mode === "local");
-  downloadModel.textContent = savedModel
-    ? (value === "error" ? "Retry Jex v3" : "Start Jex v3")
-    : "Get Jex v3 (" + MODEL_DOWNLOAD_MB + " MB)";
+  const selected = MODELS[preferredModel];
+  downloadModel.hidden = value === "loading" || (ready && mode !== "lite");
+  downloadModel.textContent = savedModels.has(preferredModel)
+    ? (value === "error" ? "Retry " : "Start ") + selected.label
+    : "Get " + selected.label + " (" + Math.round(selected.bytes / 1_000_000) + " MB)";
   byId("use-lite").hidden = value === "loading" || (ready && mode === "lite");
   update();
 }
@@ -193,7 +247,7 @@ function modelReady(name) {
   byId("model-name").textContent = name;
   byId("welcome-model").textContent = name.toUpperCase();
   try { localStorage.setItem("jex-model-mode", mode); } catch {}
-  state("ready", mode === "local" ? "Running on this device" : "Lite model · running on this device");
+  state("ready", mode === "lite" ? "Lite model · running on this device" : "Running on this device");
 }
 
 function startLite() {
@@ -225,9 +279,11 @@ function startLite() {
 
 async function connect(nextMode, allowDownload = false) {
   if (active || connecting) return;
+  if (ready && mode === nextMode) return;
   connecting = true;
   ready = false;
   mode = nextMode;
+  if (mode !== "lite") preferredModel = mode;
   state("loading", "Loading Jex…");
   try {
     worker?.terminate();
@@ -239,28 +295,30 @@ async function connect(nextMode, allowDownload = false) {
       return;
     }
     let percent = -1;
+    const selected = MODELS[mode];
     localModel = await loadLocalModel({
+      modelId: mode,
       allowDownload,
       onStatus() {
-        savedModel = true;
-        state("loading", "Starting saved Jex v3…");
+        savedModels.add(mode);
+        state("loading", "Starting saved " + selected.label + "…");
       },
       onProgress({ loaded }) {
-        const next = Math.min(100, Math.floor(loaded / MODEL_BYTES * 100));
+        const next = Math.min(100, Math.floor(loaded / selected.bytes * 100));
         if (next === percent || !Number.isFinite(next)) return;
         percent = next;
-        state("loading", next === 100 ? "Starting Jex v3…" : "Downloading Jex v3 · " + next + "%");
+        state("loading", next === 100 ? "Starting " + selected.label + "…" : "Downloading " + selected.label + " · " + next + "%");
       },
     });
     connecting = false;
     if (localModel) modelReady(localModel.name);
-    else state("setup", "Choose a model to start");
+    else state("setup", "Download " + selected.label + " to start");
   } catch (error) {
     console.warn("Couldn’t start Jex model", error);
     connecting = false;
     const detail = error.stage === "startup"
-      ? "Jex v3 is saved but couldn’t start. Retry or use Lite."
-      : "Couldn’t prepare Jex v3. Retry or use Lite.";
+      ? "The model is saved but couldn’t start. Retry or choose a smaller model."
+      : "Couldn’t prepare the model. Retry or use Lite.";
     state("error", mode === "lite" ? "Lite model unavailable" : detail);
   }
 }
@@ -271,13 +329,15 @@ form.addEventListener("submit", event => {
   if (!user || active || !ready || !storageReady) return;
   const context = contextMessages(current.messages);
   const message = { role: "assistant", text: "", status: "pending" };
-  current.messages.push({ role: "user", text: user }, message);
   current.updatedAt = Math.max(Date.now(), current.updatedAt + 1);
+  const userMessage = { role: "user", text: user, id: crypto.randomUUID(), createdAt: current.updatedAt };
+  current.messages.push(userMessage, message);
   chats.set(current.id, current);
   active = {
     id: crypto.randomUUID(), thread: current, message, savedAt: performance.now(), controller: new AbortController(),
   };
   persist(current);
+  const memoryAcknowledgment = rememberUser(current, userMessage);
   rememberSelection();
   addMessage({ role: "user", text: user });
   addMessage(message);
@@ -286,13 +346,16 @@ form.addEventListener("submit", event => {
   update();
   window.scrollTo(0, document.documentElement.scrollHeight);
   const messages = [...context, { role: "user", text: user }];
-  const localReply = arithmeticReply(messages) ?? explicitFactReply(user, current.messages.slice(0, -2));
+  const notes = memoryEnabled ? [...memories.values()] : [];
+  const history = current.messages.slice(0, -2);
+  const localReply = arithmeticReply(messages) ?? conversationRecall(user, history) ??
+    memoryAcknowledgment ?? memoryOverview(user, notes) ?? explicitFactReply(user, history, notes);
   if (localReply !== undefined) {
     addReplyText(localReply);
     finish(false, false);
   } else if (localModel) {
     const signal = active.controller.signal;
-    localModel.reply(messages, signal, addReplyText).then(
+    localModel.reply(messages, signal, addReplyText, notes).then(
       () => finish(false, signal.aborted),
       error => {
         if (!signal.aborted) console.warn("Jex generation failed", error);
@@ -311,9 +374,24 @@ prompt.addEventListener("keydown", event => {
   }
 });
 stop.addEventListener("click", stopGeneration);
-downloadModel.textContent = "Get Jex v3 (" + MODEL_DOWNLOAD_MB + " MB)";
-downloadModel.addEventListener("click", () => connect("local", true));
+downloadModel.addEventListener("click", () => connect(preferredModel, true));
 byId("use-lite").addEventListener("click", () => connect("lite"));
+byId("settings-open").addEventListener("click", () => {
+  renderMemories();
+  settingsDialog.showModal();
+});
+byId("settings-close").addEventListener("click", () => settingsDialog.close());
+for (const button of document.querySelectorAll("[data-model]")) {
+  button.addEventListener("click", () => {
+    settingsDialog.close();
+    connect(button.dataset.model);
+  });
+}
+byId("memory-enabled").addEventListener("change", event => {
+  memoryEnabled = event.target.checked;
+  try { localStorage.setItem("jex-memory-enabled", String(memoryEnabled)); } catch {}
+  renderMemories();
+});
 function newChat() {
   selectChat(createChat());
   prompt.focus();
@@ -361,6 +439,7 @@ async function loadHistory() {
       }
       chats.set(thread.id, thread);
     }
+    for (const memory of await readMemories(database)) memories.set(memory.key, memory);
     let selected;
     try { selected = localStorage.getItem(ACTIVE_KEY); } catch {}
     current = chats.get(selected) || sortedChats(chats.values())[0] || current;
@@ -370,6 +449,7 @@ async function loadHistory() {
   }
   for (const message of current.messages) addMessage(message);
   storageReady = true;
+  renderMemories();
   renderHistory();
   update();
 }
@@ -399,4 +479,4 @@ byId("app-update").addEventListener("click", async () => {
 loadHistory();
 let previousMode;
 try { previousMode = localStorage.getItem("jex-model-mode"); } catch {}
-connect(previousMode === "lite" ? "lite" : "local");
+connect(previousMode === "lite" || MODELS[previousMode] ? previousMode : "local");

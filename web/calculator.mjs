@@ -4,7 +4,7 @@ const MAX_MAGNITUDE = 1e15;
 
 function calculate(text) {
   const expression = text.toLowerCase().replaceAll("’", "'").trim()
-    .replace(/^(?:please\s+)?(?:(?:what(?:'s| is)|calculate|compute|evaluate)\s+|(?:how much is)\s+)/, "")
+    .replace(/^(?:please\s+)?(?:(?:what(?:'s| is)?|calculate|compute|evaluate)\s+|(?:how much is)\s+)/, "")
     .replace(/(?:\s+please)?[?=.]?$/, "").trim()
     .replace(/\b(plus|minus|times|multiplied\s+by|divided\s+by)\b/g, words => OPERATORS[words.split(/\s+/)[0]])
     .replace(/[×·]/g, "*").replaceAll("÷", "/").replaceAll("−", "-");
