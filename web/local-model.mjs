@@ -52,7 +52,10 @@ export async function loadLocalModel({ allowDownload, onProgress, onStatus }) {
   const llama = new Wllama({
     "single-thread/wllama.wasm": new URL("single-thread/wllama.wasm", runtime).href,
     "multi-thread/wllama.wasm": new URL("multi-thread/wllama.wasm", runtime).href,
-  }, { allowOffline: true, suppressNativeLog: true });
+  }, {
+    allowOffline: true,
+    logger: { debug() {}, log() {}, warn: console.warn, error: console.error },
+  });
   let stage = "prepare";
   try {
     const open = () => openWeights(llama, allowDownload, onProgress);
@@ -63,7 +66,7 @@ export async function loadLocalModel({ allowDownload, onProgress, onStatus }) {
     stage = "startup";
     onStatus?.("starting");
     await llama.loadModel(files, {
-      n_ctx: CONTEXT_TOKENS, n_batch: 32, n_threads: Math.min(4, navigator.hardwareConcurrency || 1),
+      n_ctx: CONTEXT_TOKENS, n_batch: 128, n_threads: Math.min(4, navigator.hardwareConcurrency || 1),
       n_gpu_layers: 0, seed: 42,
     });
     let previousPrompt = "";
