@@ -20,6 +20,9 @@ test("saves explicit user details and corrections without learning assistant cla
   ] }]);
   assert.equal(notes.length, 2);
   assert.equal(explicitFactReply("What is my name?", [], notes), "Alex");
+  assert.equal(explicitFactReply("What is my name?", [
+    { ...user("My name is Rowan."), createdAt: 1 }, assistant("Okay."),
+  ], notes), "Alex");
   assert.match(memoryOverview("What do you remember about me?", notes), /short answers/);
   assert.equal(note("My name is Rowan?").length, 0);
   assert.equal(note("My name is Rowan and I enjoy climbing.").length, 0);
