@@ -294,7 +294,10 @@ form.addEventListener("submit", event => {
     const signal = active.controller.signal;
     localModel.reply(messages, signal, addReplyText).then(
       () => finish(false, signal.aborted),
-      () => finish(!signal.aborted, signal.aborted),
+      error => {
+        if (!signal.aborted) console.warn("Jex generation failed", error);
+        finish(!signal.aborted, signal.aborted);
+      },
     );
   } else {
     worker.postMessage({ type: "chat", id: active.id, messages });
