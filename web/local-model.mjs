@@ -76,11 +76,11 @@ export async function loadLocalModel({ modelId = "local", allowDownload, onProgr
     return {
       name: model.name,
       close: () => llama.exit(),
-      async reply(messages, signal, onText, memories = []) {
+      async reply(messages, signal, onText, memories = [], observation) {
         const prompt = await buildPrompt(
           messages, async text => (await llama.tokenize(text)).length,
           CONTEXT_TOKENS - REPLY_TOKENS - 8,
-          { memories, modelName: model.engine, prefix },
+          { memories, modelName: model.engine, prefix, observation },
         );
         if (signal.aborted) return;
         // Reuse KV state only when there is new input to produce fresh logits.

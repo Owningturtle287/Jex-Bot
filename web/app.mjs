@@ -350,12 +350,12 @@ form.addEventListener("submit", event => {
   const history = current.messages.slice(0, -2);
   const localReply = arithmeticReply(messages) ?? conversationRecall(user, history) ??
     memoryAcknowledgment ?? memoryOverview(user, notes) ?? explicitFactReply(user, history, notes);
-  if (localReply !== undefined) {
+  if (!localModel && localReply !== undefined) {
     addReplyText(localReply);
     finish(false, false);
   } else if (localModel) {
     const signal = active.controller.signal;
-    localModel.reply(messages, signal, addReplyText, notes).then(
+    localModel.reply(messages, signal, addReplyText, notes, localReply).then(
       () => finish(false, signal.aborted),
       error => {
         if (!signal.aborted) console.warn("Jex generation failed", error);
