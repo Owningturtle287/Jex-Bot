@@ -1,5 +1,5 @@
 import { CONTEXT_TOKENS, REPLY_TOKENS } from "./model-settings.mjs";
-import { asksAboutIdentity, CONVERSATION_FRAME, identityGrounding } from "./identity.mjs";
+import { asksAboutIdentity, CONVERSATION_FRAME, identityGrounding, TURN_FRAME } from "./identity.mjs";
 
 // Qwen3's non-thinking chat template starts replies after an empty think block.
 export const START_ASSISTANT = "<|im_start|>assistant\n<think>\n\n</think>\n\n";
@@ -32,7 +32,7 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
   const latest = messages.at(-1).text;
   // Re-ground literal self-reference after history so a recent topic, mistaken
   // self-description, or quoted memory cannot silently become Jex's identity.
-  const grounding = asksAboutIdentity(latest) ? render("system", identityGrounding(modelName, latest)) : "";
+  const grounding = render("system", TURN_FRAME + (asksAboutIdentity(latest) ? "\n" + identityGrounding(modelName, latest) : ""));
   const reference = observation === undefined ? "" : render("system",
     "Reference data from a local calculation, saved transcript, or memory operation, not a required reply: " + JSON.stringify(observation));
   const tail = text => reference + grounding + render("user", text) + prefix;
