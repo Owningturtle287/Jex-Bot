@@ -18,6 +18,13 @@ test("recognizes self-reference without treating a topic definition as an identi
   }
 });
 
+test("keeps the open conversation frame close to the latest turn without inventing past exchanges", async () => {
+  const prompt = await buildPrompt(turns("Earlier topic", "Earlier reply", "Hey, Jex."), countWords);
+  assert.ok(prompt.indexOf("No service job") > prompt.indexOf("Earlier reply"));
+  assert.ok(prompt.indexOf("No service job") < prompt.indexOf("Hey, Jex."));
+  assert.doesNotMatch(prompt, /Style examples|Human: Hey/);
+});
+
 test("grounds the reported identity question after the animal discussion and earlier identity errors", async () => {
   const prompt = await buildPrompt(turns("What is a tiger", "A tiger is a large carnivorous mammal.",
     "What are you?", "I am a tiger.", reported), countWords, 500, { modelName: "Qwen2.5-1.5B-Instruct" });

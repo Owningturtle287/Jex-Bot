@@ -46,7 +46,7 @@ test("retrieves saved notes in the token budget and uses the selected model temp
   });
   assert.match(prompt, /marigold/);
   assert.match(prompt, /quoted as background data/);
-  assert.equal((prompt.match(/<\|im_start\|>system/g) ?? []).length, 1);
+  assert.equal((prompt.match(/<\|im_start\|>system/g) ?? []).length, 2);
   assert.ok(prompt.endsWith(prefix));
   assert.doesNotMatch(prompt, /<think>/);
   assert.ok(prompt.split(/\s+/).length <= 240);
