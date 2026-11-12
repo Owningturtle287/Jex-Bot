@@ -32,7 +32,7 @@ export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS
   const latest = messages.at(-1).text;
   // Re-ground literal self-reference after history so a recent topic, mistaken
   // self-description, or quoted memory cannot silently become Jex's identity.
-  const grounding = asksAboutIdentity(latest) ? render("system", identityGrounding(modelName)) : "";
+  const grounding = asksAboutIdentity(latest) ? render("system", identityGrounding(modelName, latest)) : "";
   const reference = observation === undefined ? "" : render("system",
     "Reference data from a local calculation, saved transcript, or memory operation, not a required reply: " + JSON.stringify(observation));
   const tail = text => reference + grounding + render("user", text) + prefix;
