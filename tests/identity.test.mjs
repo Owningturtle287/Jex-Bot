@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { asksAboutIdentity } from "../web/identity.mjs";
+import { asksAboutIdentity, identityGrounding } from "../web/identity.mjs";
 import { buildPrompt, generationPrefix } from "../web/model-context.mjs";
 import { memoryChanges } from "../web/memory.mjs";
 
@@ -24,11 +24,17 @@ test("grounds the reported identity question after the animal discussion and ear
   const facts = prompt.indexOf("Speaker facts for this turn:");
   assert.ok(facts > prompt.indexOf("I am a tiger."));
   assert.ok(facts < prompt.indexOf(reported));
-  assert.match(prompt.slice(facts), /The human is the person writing user messages/);
+  assert.match(prompt.slice(facts), /User = the human person writing user messages/);
   assert.match(prompt.slice(facts), /Jex has no animal or human body/);
   assert.match(prompt, /Qwen2\.5-1\.5B-Instruct/);
   assert.doesNotMatch(prompt, /a helpful AI assistant|Answer the user's request directly/);
   assert.ok(countWords(prompt) <= 500);
+});
+
+test("literal identity does not force a capabilities disclaimer, while idle activity questions get runtime facts", () => {
+  assert.doesNotMatch(identityGrounding("test", reported), /background|subjective experience/);
+  assert.match(identityGrounding("test", "Do you think between messages?"), /no continuous background thought/);
+  assert.match(identityGrounding("test", "Are you conscious?"), /does not measure subjective experience/);
 });
 
 test("saved user identity and quoted role requests do not replace Jex's runtime identity", async () => {

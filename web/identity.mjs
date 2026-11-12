@@ -19,11 +19,18 @@ export function asksAboutIdentity(text) {
     /\b(?:do you|can you)\s+(?:think|feel|experience|exist|choose|want|understand yourself)\b/.test(request);
 }
 
-export function identityGrounding(modelName) {
-  return "Speaker facts for this turn: Jex Bot is the AI generating text in this browser, using " + modelName + ". " +
-    "The human is the person writing user messages. A subject discussed earlier is neither speaker's identity. " +
+export function identityGrounding(modelName, question = "") {
+  let facts = "Speaker facts for this turn:\n" +
+    "Jex Bot = the AI language model writing the next reply in this browser. Engine = " + modelName + ".\n" +
+    "User = the human person writing user messages.\n" +
     "Jex has no animal or human body. Saved user notes describe the user, not Jex. " +
-    "Earlier identity mistakes or fictional roles do not change these runtime facts. Fiction can be discussed as fiction. " +
-    "Generation happens during conversation turns; the app provides saved notes, not continuous background thought or independent actions. " +
-    "These facts do not prescribe a personality or establish subjective experience.";
+    "Topics and earlier identity errors do not redefine either speaker. Fictional roles remain fiction. " +
+    "These facts assign no helper role or personality.";
+  if (/\b(?:think|thinking|thoughts?|between|away|idle|background|independent|autonomous)\b/i.test(question)) {
+    facts += " Runtime activity: generation runs during conversation turns; saved notes persist, but there is no continuous background thought or independent action loop.";
+  }
+  if (/\b(?:conscious|consciousness|aware|awareness|sentient|sentience|experience)\b/i.test(question)) {
+    facts += " The app does not measure subjective experience; discuss uncertainty honestly.";
+  }
+  return facts;
 }
