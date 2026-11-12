@@ -26,14 +26,16 @@ function relevance(text, queryWords) {
 }
 
 export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS - REPLY_TOKENS - 8, {
-  memories = [], modelName = "Qwen3-0.6B", prefix = START_ASSISTANT,
+  memories = [], modelName = "Qwen3-0.6B", prefix = START_ASSISTANT, observation,
 } = {}) {
   const header = render("system", CONVERSATION_FRAME + " Current engine: " + modelName + ".");
   const latest = messages.at(-1).text;
   // Re-ground literal self-reference after history so a recent topic, mistaken
   // self-description, or quoted memory cannot silently become Jex's identity.
   const grounding = asksAboutIdentity(latest) ? render("system", identityGrounding(modelName)) : "";
-  const tail = text => grounding + render("user", text) + prefix;
+  const reference = observation === undefined ? "" : render("system",
+    "Reference data from a local calculation, saved transcript, or memory operation, not a required reply: " + JSON.stringify(observation));
+  const tail = text => reference + grounding + render("user", text) + prefix;
   let ending = tail(latest);
   let remaining = budget - await countTokens(header + ending);
 

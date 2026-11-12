@@ -11,6 +11,6 @@
   {"label":"unfamiliar two-word recall","turns":["Please remember violet mountain.","Okay, violet mountain.","What did I tell you to remember?"],"checks":["\\bviolet mountain\\b"]},
   {"label":"new factual question","turns":["What does the nucleus of a cell contain?"],"checks":["\\b(?:DNA|genetic)\\b"]},
   {"label":"new reasoning","turns":["Ava is older than Ben. Ben is older than Kai. Who is youngest?"],"checks":["\\bKai\\b"]},
-  {"label":"simple addition","turns":["What is 4 plus 8?"],"checks":["^12[.!]?$"]},
+  {"label":"simple addition","turns":["What is 4 plus 8?"],"checks":["\\b12\\b"]},
   {"label":"clarification","turns":["Can you explain it to me?"],"checks":["\\b(?:what|which|share|more)\\b"]}
 ]

@@ -14,13 +14,11 @@ RUN_CASE = """async ({ turns, checks, reject, case_sensitive, minimum_words = 0 
   const messages = turns.map((text, index) => ({
     role: index % 2 ? "assistant" : "user", text,
   }));
-  let reply = arithmeticReply(messages) ?? conversationRecall(turns.at(-1), messages.slice(0, -1)) ??
+  const observation = arithmeticReply(messages) ?? conversationRecall(turns.at(-1), messages.slice(0, -1)) ??
     explicitFactReply(turns.at(-1), messages.slice(0, -1));
-  if (reply === undefined) {
-    reply = "";
-    await window.evalModel.reply(messages, new AbortController().signal, text => { reply += text; });
-    reply = reply.trim();
-  }
+  let reply = "";
+  await window.evalModel.reply(messages, new AbortController().signal, text => { reply += text; }, [], observation);
+  reply = reply.trim();
   const matches = pattern => new RegExp(pattern, case_sensitive ? "" : "i").test(reply);
   return { passed: checks.every(matches) && !(reject ?? []).some(matches) &&
     reply.split(/\\s+/).length >= minimum_words, reply };
