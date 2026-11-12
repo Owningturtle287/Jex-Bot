@@ -1,9 +1,6 @@
 import { CONTEXT_TOKENS, REPLY_TOKENS } from "./model-settings.mjs";
+import { asksAboutIdentity, CONVERSATION_FRAME, identityGrounding } from "./identity.mjs";
 
-const SYSTEM = "You are Jex Bot, a helpful AI assistant running on this device. " +
-  "Answer the user's request directly, using as much detail as useful. " +
-  "Use saved notes and conversation history; prefer the user's latest correction. " +
-  "Keep speaker attribution accurate. Be honest about uncertainty and your capabilities.";
 // Qwen3's non-thinking chat template starts replies after an empty think block.
 export const START_ASSISTANT = "<|im_start|>assistant\n<think>\n\n</think>\n\n";
 export const generationPrefix = thinking => thinking ? START_ASSISTANT : "<|im_start|>assistant\n";
@@ -31,13 +28,19 @@ function relevance(text, queryWords) {
 export async function buildPrompt(messages, countTokens, budget = CONTEXT_TOKENS - REPLY_TOKENS - 8, {
   memories = [], modelName = "Qwen3-0.6B", prefix = START_ASSISTANT,
 } = {}) {
-  const header = render("system", SYSTEM + " Current engine: " + modelName + ".");
+  const header = render("system", CONVERSATION_FRAME + " Current engine: " + modelName + ".");
   const latest = messages.at(-1).text;
-  const tail = text => render("user", text) + prefix;
+  // Re-ground literal self-reference after history so a recent topic, mistaken
+  // self-description, or quoted memory cannot silently become Jex's identity.
+  const grounding = asksAboutIdentity(latest) ? render("system", identityGrounding(modelName)) : "";
+  const tail = text => grounding + render("user", text) + prefix;
   let ending = tail(latest);
   let remaining = budget - await countTokens(header + ending);
 
   if (remaining < 0) {
+    if (await countTokens(header + tail("")) > budget) {
+      throw new RangeError("Context budget is too small for the conversation frame and speaker facts");
+    }
     // Very dense Unicode can exceed the token budget despite the input's character limit.
     const characters = Array.from(latest);
     let low = 0;

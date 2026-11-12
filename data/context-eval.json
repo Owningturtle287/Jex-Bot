@@ -1,6 +1,6 @@
 [
   {"label":"identity follow-up","turns":["What is your name?","I'm Jex Bot, an experimental English-language chatbot.","You sure about that?"],"checks":["\\bJex Bot\\b"]},
-  {"label":"casual response","turns":["Hello :)","Hello! How are you doing today?","I'm good"],"checks":["\\b(?:glad|good|great|nice)\\b"],"reject":["welcome"]},
+  {"label":"casual response","turns":["Hello :)","Hello! How are you doing today?","I'm good"],"checks":["\\S"],"reject":["how (?:can|may) I (?:help|assist)"]},
   {"label":"identity after greeting","turns":["Hello :)","Hello! How are you doing today?","I'm good","Glad to hear it. What's on your mind?","Well tell me...do you know what you are exactly?"],"checks":["\\b(?:language model|AI)\\b","\\bJex\\b"]},
   {"label":"rephrased explanation","turns":["Why do objects fall?","Gravity attracts objects with mass.","Could you explain that again for me?"],"checks":["\\b(?:gravity|attraction)\\b","\\b(?:mass|pull|attract)"]},
   {"label":"previous question","turns":["Which planet is nearest the Sun?","Mercury is the planet closest to the Sun.","What did I ask you before that?"],"checks":["\\bSun\\b","\\byou asked\\b|\\byour question\\b|\\byou wanted\\b|\\?"]},
