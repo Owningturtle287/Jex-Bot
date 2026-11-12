@@ -33,6 +33,7 @@ def main():
     parser.add_argument("--model", choices=["local", "strong"], default="local")
     parser.add_argument("--prompts", type=Path, nargs="+", default=[
         ROOT / "data" / "context-eval.json", ROOT / "data" / "browser-eval.json",
+        ROOT / "data" / "identity-eval.json",
     ])
     args = parser.parse_args()
 
